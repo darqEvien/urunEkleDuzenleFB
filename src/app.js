@@ -158,7 +158,8 @@ const fetchItems = async (section) => {
         return `
         <div class="item-box">
           <h3>${category.title}</h3>
-          <p>Property Name: ${category.propertyName}</p>
+          <p>Kısaltma Adı: ${category.propertyName}</p>
+          <p>Seçme: ${category.select.value}</p>
           <button onclick="editCategory('${doc.id}')">Edit</button>
           <button onclick="confirmDeleteCategory('${doc.id}')" class="delete-btn">Delete</button>
         </div>
@@ -389,6 +390,12 @@ window.showCategoryForm = function (edit = false) {
     <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Kategori</h2>
     <input type="text" id="categoryTitle" placeholder="Kategori Başlığı" required>
     <input type="text" id="propertyName" placeholder="Property Name" required>
+    <div class="radioButtons">
+    <input type="radio" id="singleSelect" value="singleSelect" name="select">
+    <label for="singleSelect">Tekli Seçim</label><br>
+    <input type="radio" id="multiSelect" value="multiSelect" name="select">
+    <label for="multiSelect">Çoklu Seçim</label><br>
+    </div>
     <button onclick="submitCategory()">Kaydet</button>
     <button onclick="closeForm()">İptal</button>
   `;
@@ -400,6 +407,7 @@ window.showCategoryForm = function (edit = false) {
 window.submitCategory = async function () {
   const categoryTitle = document.getElementById("categoryTitle").value;
   const propertyName = document.getElementById("propertyName").value;
+  const selectValue = document.querySelector(`input[name="select"]:checked`).value;
 
   if (!categoryTitle || !propertyName) {
     alert("Tüm alanları doldurun!");
@@ -423,6 +431,7 @@ window.submitCategory = async function () {
       {
         title: categoryTitle,
         propertyName: propertyName,
+        select: selectValue,
       },
       { merge: true }
     ); // Mevcut kategori varsa güncelle, yeni alanları ekle
@@ -457,6 +466,7 @@ window.editCategory = async function (categoryId) {
         document.getElementById("categoryTitle").value = category.title || "";
         document.getElementById("propertyName").value =
           category.propertyName || "";
+          // document.getElementById("selectValue").value = category.select || "";
       }, 0); // Bu gecikme, formun tamamen yüklenmesini sağlar.
     } else {
       console.error("Kategori bulunamadı!");
