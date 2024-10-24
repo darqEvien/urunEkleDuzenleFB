@@ -30,6 +30,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+
+let tag = []
 let currentItem = null;
 let currentSection = "home";
 let sectionConfig = {
@@ -37,6 +39,8 @@ let sectionConfig = {
   categories: { title: "Kategoriler" },
   orders: { title: "Siparişler" },
 };
+
+
 
 // Dinamik sectionConfig oluşturma
 async function fetchSectionConfig() {
@@ -69,7 +73,7 @@ window.confirmDelete = async function (itemID) {
   }
 };
 
-// Ürün veya kategori düzenleme fonksiyonu
+
 
 // Ürün silme
 const deleteItem = async (itemID) => {
@@ -319,11 +323,11 @@ window.submitItem = async function () {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
-  const tag = document.getElementById("tag").value;
+  const tag = document.getElementById("tag").value; // Tag boş olabilir
   const imageFile = document.getElementById("imageFile").files[0];
 
-  if (!name || !price || !size || !tag) {
-    alert("Tüm alanları doldurun!");
+  if (!name || !price || !size) {
+    alert("Lütfen ürün adı, fiyat ve boyut alanlarını doldurun!");
     return;
   }
 
@@ -360,7 +364,7 @@ window.submitItem = async function () {
         name,
         price,
         size,
-        tag,
+        tag: tag || "", // Tag boş olabilir
         imageUrl,
       },
       { merge: true }
@@ -374,6 +378,7 @@ window.submitItem = async function () {
     console.error("Ürün kaydedilirken hata:", error);
   }
 };
+
 
 // Formu kapatma fonksiyonu
 window.closeForm = function () {
@@ -400,6 +405,7 @@ window.showCategoryForm = function (edit = false) {
     <button onclick="closeForm()">İptal</button>
   `;
   formOverlay.style.display = "flex";
+  
 };
 
 // Kategori gönderme fonksiyonu
@@ -438,6 +444,8 @@ window.submitCategory = async function () {
 
     closeForm();
     fetchItems("categories"); // Kategorileri güncelle
+    // location.reload();
+    // updateSidebarMenu();
     currentItem = null; // Düzenleme tamamlandıktan sonra currentItem'ı sıfırla
   } catch (error) {
     console.error("Hata:", error);
@@ -480,6 +488,8 @@ window.editCategory = async function (categoryId) {
 window.confirmDeleteCategory = function (categoryId) {
   if (confirm("Bu kategoriyi silmek istediğinizden emin misiniz?")) {
     deleteCategory(categoryId);
+    // location.reload(); 
+    // updateSidebarMenu();
   }
 };
 
