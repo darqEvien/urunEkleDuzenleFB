@@ -173,9 +173,9 @@ const fetchItems = async (section) => {
   } else {
     const querySnapshot = await getDocs(collection(db, section));
     itemListHTML = querySnapshot.docs
-      .map((doc) => {
-        const item = doc.data();
-        return `
+    .map((doc) => {
+      const item = doc.data();
+      return `
         <div class="item-box">
           <h3>${item.name || "Unnamed Item"}</h3>
           <div class="image-container">
@@ -183,15 +183,14 @@ const fetchItems = async (section) => {
           </div>
           <p>Fiyat: ${item.price}</p>
           <p>Boyut: ${item.size}</p>
-          <p>Tag: ${item.tag}</p>
+          <p><p>Tag: ${Array.isArray(item.tag) ? item.tag.join(', ') : item.tag}</p>
+          </p> <!-- Tagleri virgülle ayrılmış olarak göster -->
           <button onclick="editItem('${doc.id}')">Edit</button>
-          <button onclick="confirmDelete('${
-            doc.id
-          }')" class="delete-btn">Delete</button>
+          <button onclick="confirmDelete('${doc.id}')" class="delete-btn">Delete</button>
         </div>
       `;
-      })
-      .join("");
+    })
+    .join("");
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
@@ -223,7 +222,7 @@ window.showForm = async function (edit = false) {
     <input type="text" id="name" placeholder="Ürün Adı" required>
     <input type="number" id="price" required placeholder="Fiyat">
     <input type="text" id="size" required placeholder="Boyut">
-    <input type="text" id="tag" required placeholder="Etiket">
+    <input type="text" id="tag" required placeholder="Etiketleri virgül ile ayırınız.">
     <input type="file" id="imageFile" accept="image/*">
     <button onclick="submitItem()">Kaydet</button>
     <button onclick="closeForm()">İptal</button>
@@ -323,7 +322,8 @@ window.submitItem = async function () {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
-  const tag = document.getElementById("tag").value; // Tag boş olabilir
+  const tag = document.getElementById("tag").value.split(',').map(t => t.trim());
+  // Tagleri dizi olarak al
   const imageFile = document.getElementById("imageFile").files[0];
 
   if (!name || !price || !size) {
@@ -337,13 +337,13 @@ window.submitItem = async function () {
 
     // Eğer düzenleme modundaysak, mevcut item ID'yi kullan
     if (currentItem) {
-      itemID = currentItem; // Mevcut ürünü güncellemek için ID'yi kullanıyoruz
+      itemID = currentItem;
     } else {
       // Yeni ürün ekleme modundaysak, yeni bir ID oluştur
       itemID = await updateID();
     }
 
-    // Eğer yeni bir resim yüklenmişse, resmi depolamaya yükleyip URL'yi al
+    // Resim yükleme işlemi
     if (imageFile) {
       const storageRef = ref(storage, `images/${itemID}`);
       await uploadBytes(storageRef, imageFile);
@@ -351,7 +351,6 @@ window.submitItem = async function () {
     } else if (
       document.getElementById("imageFile").hasAttribute("data-existing-url")
     ) {
-      // Eğer düzenleme modundaysak ve resim güncellenmediyse, eski URL'yi kullan
       imageUrl = document
         .getElementById("imageFile")
         .getAttribute("data-existing-url");
@@ -364,20 +363,20 @@ window.submitItem = async function () {
         name,
         price,
         size,
-        tag: tag || "", // Tag boş olabilir
+        tag, // Tag alanını dizi olarak kaydet
         imageUrl,
       },
       { merge: true }
-    ); // 'merge: true' ile mevcut alanları güncelliyoruz
+    );
 
-    // Formu kapat ve içeriği güncelle
     closeForm();
     fetchItems(currentSection);
-    currentItem = null; // Düzenleme işlemi bittikten sonra currentItem'ı sıfırla
+    currentItem = null;
   } catch (error) {
     console.error("Ürün kaydedilirken hata:", error);
   }
 };
+
 
 
 // Formu kapatma fonksiyonu
