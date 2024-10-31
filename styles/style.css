@@ -28,7 +28,10 @@ body {
   .sidebar h2:hover {
     color: #ffffff;
   }
-
+   .sidebar-item {
+    display: flex;
+    max-width: 13.5rem;
+  } 
   .main-content {
     flex-grow: 1;
     padding: 20px;
