@@ -161,6 +161,12 @@ body {
   border-radius: 5px;
 }
 
+#itemList {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 /* Delete butonunu kırmızı yapma */
 .delete-btn {
   background-color: red;

@@ -271,6 +271,7 @@ window.editItem = async function (itemId) {
       const nameField = document.getElementById("name");
       const priceField = document.getElementById("price");
       const sizeField = document.getElementById("size");
+      const descField = document.getElementById("description");
       const tagField = document.getElementById("tag");
       const imageFileField = document.getElementById("imageFile");
 
@@ -278,6 +279,7 @@ window.editItem = async function (itemId) {
         !nameField ||
         !priceField ||
         !sizeField ||
+        !descField ||
         !tagField ||
         !imageFileField
       ) {
@@ -289,6 +291,7 @@ window.editItem = async function (itemId) {
       nameField.value = item.name || "";
       priceField.value = item.price || "";
       sizeField.value = item.size || "";
+      descField.value = item.description || "";
       tagField.value = item.tag || "";
 
       // Eğer resim varsa mevcut resim URL'sini tut
