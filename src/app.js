@@ -163,7 +163,7 @@ const fetchItems = async (section) => {
         <div class="item-box">
           <h3>${category.title}</h3>
           <p>Kısaltma Adı: ${category.propertyName}</p>
-          <p>Seçme: ${category.select.value}</p>
+          <p>Seçme: ${category.select}</p>
           <button onclick="editCategory('${doc.id}')">Edit</button>
           <button onclick="confirmDeleteCategory('${doc.id}')" class="delete-btn">Delete</button>
         </div>
@@ -183,6 +183,7 @@ const fetchItems = async (section) => {
           </div>
           <p>Fiyat: ${item.price}</p>
           <p>Boyut: ${item.size}</p>
+          <p>Açıklama: ${item.description}</p>
           <p><p>Tag: ${Array.isArray(item.tag) ? item.tag.join(', ') : item.tag}</p>
           </p> <!-- Tagleri virgülle ayrılmış olarak göster -->
           <button onclick="editItem('${doc.id}')">Edit</button>
@@ -222,6 +223,7 @@ window.showForm = async function (edit = false) {
     <input type="text" id="name" placeholder="Ürün Adı" required>
     <input type="number" id="price" required placeholder="Fiyat">
     <input type="text" id="size" required placeholder="Boyut">
+    <input type="text" id="description" placeholder="Açıklama">
     <input type="text" id="tag" required placeholder="Etiketleri virgül ile ayırınız.">
     <input type="file" id="imageFile" accept="image/*">
     <button onclick="submitItem()">Kaydet</button>
@@ -239,6 +241,7 @@ window.showForm = async function (edit = false) {
           document.getElementById("name").value = item.name || "";
           document.getElementById("price").value = item.price || "";
           document.getElementById("size").value = item.size || "";
+          document.getElementById("description").value = item.description || "";
           document.getElementById("tag").value = item.tag || "";
           document
             .getElementById("imageFile")
@@ -322,11 +325,12 @@ window.submitItem = async function () {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
+  const description = document.getElementById("description").value; // Açıklamayı al
   const tag = document.getElementById("tag").value.split(',').map(t => t.trim());
   // Tagleri dizi olarak al
   const imageFile = document.getElementById("imageFile").files[0];
 
-  if (!name || !price || !size) {
+  if (!name || !price || !size || !description) {
     alert("Lütfen ürün adı, fiyat ve boyut alanlarını doldurun!");
     return;
   }
@@ -363,6 +367,7 @@ window.submitItem = async function () {
         name,
         price,
         size,
+        description,
         tag, // Tag alanını dizi olarak kaydet
         imageUrl,
       },
@@ -394,14 +399,17 @@ window.showCategoryForm = function (edit = false) {
     <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Kategori</h2>
     <input type="text" id="categoryTitle" placeholder="Kategori Başlığı" required>
     <input type="text" id="propertyName" placeholder="Property Name" required>
-    <div class="radioButtons">
+    <div class="radioButtons" style="display:inline-flex; justify-content:center;">
     <input type="radio" id="singleSelect" value="singleSelect" name="select">
     <label for="singleSelect">Tekli Seçim</label><br>
     <input type="radio" id="multiSelect" value="multiSelect" name="select">
     <label for="multiSelect">Çoklu Seçim</label><br>
     </div>
+    <br>
+    <div style="display:flex; justify-content:center;">
     <button onclick="submitCategory()">Kaydet</button>
     <button onclick="closeForm()">İptal</button>
+    </div>
   `;
   formOverlay.style.display = "flex";
   
@@ -473,6 +481,11 @@ window.editCategory = async function (categoryId) {
         document.getElementById("categoryTitle").value = category.title || "";
         document.getElementById("propertyName").value =
           category.propertyName || "";
+          if (category.select === "singleSelect") {
+            document.getElementById("singleSelect").checked = true;
+          } else if (category.select === "multiSelect") {
+            document.getElementById("multiSelect").checked = true;
+          }
           // document.getElementById("selectValue").value = category.select || "";
       }, 0); // Bu gecikme, formun tamamen yüklenmesini sağlar.
     } else {
