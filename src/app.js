@@ -2,6 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/fireba
 import {
   getFirestore,
   collection,
+  writeBatch,
+  orderBy,
+  query,
   doc,
   setDoc,
   getDocs,
@@ -14,7 +17,7 @@ import {
   uploadBytes,
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
-
+import Sortable from "sortablejs";
 // Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyA8UsQZNNkhW-76nND5uysnTp65E-OEcik",
@@ -40,12 +43,11 @@ let sectionConfig = {
   orders: { title: "Siparişler" },
 };
 
-
-
 // Dinamik sectionConfig oluşturma
 async function fetchSectionConfig() {
   try {
-    const categoriesSnapshot = await getDocs(collection(db, "categories"));
+    const cq = query(collection(db,"categories"),orderBy("order"))
+    const categoriesSnapshot = await getDocs(cq);
     const config = {};
 
     categoriesSnapshot.forEach((doc) => {
@@ -72,8 +74,6 @@ window.confirmDelete = async function (itemID) {
     await deleteItem(itemID);
   }
 };
-
-
 
 // Ürün silme
 const deleteItem = async (itemID) => {
@@ -155,12 +155,13 @@ const fetchItems = async (section) => {
       )
       .join("");
   } else if (section === "categories") {
-    const categoriesSnapshot = await getDocs(collection(db, "categories"));
+    const q = query(collection(db,"categories"),orderBy("order"));
+    const categoriesSnapshot = await getDocs(q);
     itemListHTML = categoriesSnapshot.docs
       .map((doc) => {
         const category = doc.data();
         return `
-        <div class="item-box">
+        <div class="item-box" data-id="${doc.id}">
           <h3>${category.title}</h3>
           <p>Kısaltma Adı: ${category.propertyName}</p>
           <p>Seçme: ${category.select}</p>
@@ -171,12 +172,13 @@ const fetchItems = async (section) => {
       })
       .join("");
   } else {
-    const querySnapshot = await getDocs(collection(db, section));
+    const qe = query(collection(db,section),orderBy("order"))
+    const querySnapshot = await getDocs(qe);
     itemListHTML = querySnapshot.docs
     .map((doc) => {
       const item = doc.data();
       return `
-        <div class="item-box">
+        <div class="item-box" data-id="${doc.id}">
           <h3>${item.name || "Unnamed Item"}</h3>
           <div class="image-container">
             <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
@@ -195,6 +197,7 @@ const fetchItems = async (section) => {
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
+  initSortable();
 };
 
 // Kategorileri yükledikten sonra content'i göster
@@ -332,6 +335,7 @@ window.submitItem = async function () {
   const tag = document.getElementById("tag").value.split(',').map(t => t.trim());
   // Tagleri dizi olarak al
   const imageFile = document.getElementById("imageFile").files[0];
+  
 
   if (!name || !price || !size || !description) {
     alert("Lütfen ürün adı, fiyat ve boyut alanlarını doldurun!");
@@ -349,6 +353,9 @@ window.submitItem = async function () {
       // Yeni ürün ekleme modundaysak, yeni bir ID oluştur
       itemID = await updateID();
     }
+    const collectionRef = collection(db, currentSection);
+    const querySnapshot = await getDocs(collectionRef);
+    const orderValue = querySnapshot.size + 1; //
 
     // Resim yükleme işlemi
     if (imageFile) {
@@ -373,6 +380,7 @@ window.submitItem = async function () {
         description,
         tag, // Tag alanını dizi olarak kaydet
         imageUrl,
+        order: orderValue,
       },
       { merge: true }
     );
@@ -440,7 +448,9 @@ window.submitCategory = async function () {
       // Yeni bir kategori ekliyorsak, yeni ID oluştur
       categoryId = await updateID();
     }
-
+    const collectionRef = collection(db, "categories");
+    const querySnapshot = await getDocs(collectionRef);
+    const orderValue = querySnapshot.size + 1; // Mevcut belge sayısını al
     // Kategoriyi güncelle veya ekle
     await setDoc(
       doc(db, "categories", categoryId),
@@ -448,6 +458,7 @@ window.submitCategory = async function () {
         title: categoryTitle,
         propertyName: propertyName,
         select: selectValue,
+        order:orderValue,
       },
       { merge: true }
     ); // Mevcut kategori varsa güncelle, yeni alanları ekle
@@ -518,7 +529,39 @@ async function deleteCategory(categoryId) {
   }
 }
 // Ürün düzenleme fonksiyonu
+const initSortable = () => {
+  const itemList = document.getElementById("itemList");
+  
+  Sortable.create(itemList, {
+    animation: 150,
+    onEnd: async (evt) => {
+      const itemIDs = Array.from(itemList.children).map(item => item.dataset.id);
+      await updateItemOrder(itemIDs);
+    }
+  });
+};
+const updateItemOrder = async (itemIDs) => {
+  try {
+    // Hangi öğelerin sıralandığını kontrol et
+    console.log("Sıralanan öğe ID'leri:", itemIDs);
 
+    const batch = writeBatch(db);
+    itemIDs.forEach((id, index) => {
+      if (!id) {
+        console.error("Geçersiz ID bulundu:", id);
+        return; // Geçersiz ID varsa işlemi atla
+      }
+      
+      const itemRef = doc(db, currentSection, id); // currentSection'ın geçerli olduğundan emin olun
+      batch.update(itemRef, { order: index }); // Yeni sıralama bilgisi
+    });
+    
+    await batch.commit();
+    console.log("Sıralama güncellendi.");
+  } catch (error) {
+    console.error("Sıralama güncellenirken hata:", error);
+  }
+};
 // Sayfa yüklendiğinde default içerik göster
 window.onload = async function () {
   sectionConfig = await fetchSectionConfig();
