@@ -9,14 +9,14 @@
 
 <body>
   <div class="sidebar">
-<div class="stickyMa" id="sidebar">
+    <div class="stickyMa" id="sidebar">
       <!-- <h2 onclick="showContent('home')">Home</h2>
-      <h2 onclick="showContent('prefab')">Prefabrik Evler</h2>
+      <h2 onclick="showContent(' prefab')">Prefabrik Evler</h2>
       <h2 onclick="showContent('verandas')">Verandalar</h2>
       <h2 onclick="showContent('categories')">Kategoriler</h2>
       <h2 onclick="showContent('extras')">Ekstralar</h2>
       <h2 onclick="showContent('orders')">Siparişler</h2> -->
-</div>
+    </div>
   </div>
   <div class="main-content" id="mainContent">
     <button id="addItemBtn" class="add-item-btn" onclick="showForm()">Ürün Ekle</button>
@@ -26,16 +26,14 @@
   <div class="form-overlay" id="formOverlay">
     <div class="form-container" id="formContainer">
       <h2 id="formTitle"></h2>
-      
+      <!-- Form fields will be generated here -->
       <button onclick="submitItem()">Kaydet</button>
       <button onclick="closeForm()">İptal</button>
     </div>
-    <div id="categoryFormOverlay" style="display: none;"></div> 
+    <div id="categoryFormOverlay" style="display: none;"></div>
   </div>
-  <script type="module" src="./src/main.js"></script>
-
   <script type="module" src="./src/app.js"></script>
-
+  <script type="module" src="./src/main.js"></script>
 </body>
 
 </html>

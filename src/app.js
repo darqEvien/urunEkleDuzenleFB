@@ -18,6 +18,7 @@ import {
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 import Sortable from "sortablejs";
+
 // Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyA8UsQZNNkhW-76nND5uysnTp65E-OEcik",
@@ -33,8 +34,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-
-let tag = []
 let currentItem = null;
 let currentSection = "home";
 let sectionConfig = {
@@ -43,10 +42,10 @@ let sectionConfig = {
   orders: { title: "Siparişler" },
 };
 
-// Dinamik sectionConfig oluşturma
+// Fetch section configuration
 async function fetchSectionConfig() {
   try {
-    const cq = query(collection(db,"categories"),orderBy("order"))
+    const cq = query(collection(db, "categories"), orderBy("order"));
     const categoriesSnapshot = await getDocs(cq);
     const config = {};
 
@@ -55,7 +54,6 @@ async function fetchSectionConfig() {
       config[category.propertyName] = { title: category.title };
     });
 
-    console.log("Section Config:", config);
     return config;
   } catch (error) {
     console.error("Error fetching section config:", error);
@@ -68,28 +66,13 @@ const defaultSections = [
   { propertyName: "Kategoriler", section: "categories" },
   { propertyName: "Siparişler", section: "orders" },
 ];
-window.confirmDelete = async function (itemID) {
-  const confirmed = confirm("Bu ürünü silmek istediğinize emin misiniz?");
-  if (confirmed) {
-    await deleteItem(itemID);
-  }
-};
 
-// Ürün silme
-const deleteItem = async (itemID) => {
-  try {
-    await deleteDoc(doc(db, currentSection, itemID)); // Firestore'dan sil
-    fetchItems(currentSection); // Ürün listesini güncelle
-  } catch (error) {
-    console.error("Ürün silme hatası:", error);
-  }
-};
-// Sidebar menüsünü güncelleyen fonksiyon
-const updateSidebarMenu = () => {
+// Update sidebar menu
+const updateSidebarMenu = async () => {
   const sidebar = document.getElementById("sidebar");
   let sidebarHTML = "";
 
-  // Varsayılan menü öğelerini ekle
+  // Default sections'ları ekle
   sidebarHTML += defaultSections
     .map(
       (item) => `
@@ -100,39 +83,115 @@ const updateSidebarMenu = () => {
     )
     .join("");
 
-  // Dinamik menü öğelerini ekle (varsayılanları hariç tutarak)
-  for (let key in sectionConfig) {
-    if (!defaultSections.some((item) => item.section === key)) {
-      sidebarHTML += `
-        <h2 onclick="showContent('${key}')" class="sidebar-item">
-          <span>${sectionConfig[key].title}</span>
-        </h2>
-      `;
-    }
+  // Sadece ana kategorileri (parentCategory'si olmayanları) sidebar'a ekle
+  const categories = await fetchCategoriesForDropdown();
+  const mainCategories = categories.filter(cat => !cat.parentCategory);
+  
+  for (let category of mainCategories) {
+    sidebarHTML += `
+      <h2 onclick="showContent('${category.propertyName}')" class="sidebar-item">
+        <span>${category.title}</span>
+      </h2>
+    `;
   }
 
   sidebar.innerHTML = sidebarHTML;
 };
 
-// Update section header and button visibility
-const updateHeaderAndButtons = (section) => {
-  const addItemBtn = document.getElementById("addItemBtn");
+// Show category form
+window.showCategoryForm = async function (edit = false) {
+  const formOverlay = document.getElementById("formOverlay");
+  const formContainer = document.getElementById("formContainer");
 
-  if (section === "orders") {
-    addItemBtn.style.display = "none";
-  } else if (section === "categories") {
-    addItemBtn.style.display = "block";
-    addItemBtn.innerText = "Kategori Ekle";
-    addItemBtn.onclick = () => showCategoryForm(false); // Kategori ekleme modunda formu göster
-  } else {
-    addItemBtn.style.display = "block";
-    addItemBtn.innerText = "Ürün Ekle";
-    addItemBtn.onclick = showForm; // Ürün ekleme modunda formu göster
+  // Fetch categories for the dropdown
+  const categories = await fetchCategoriesForDropdown();
+
+  const categoryOptions = categories
+    .map(
+      (category) =>
+        `<option value="${category.propertyName}">${category.title}</option>`
+    )
+    .join("");
+
+  formContainer.innerHTML = `
+    <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Kategori</h2>
+    <input type="text" id="categoryTitle" placeholder="Kategori Başlığı" required>
+    <input type="text" id="propertyName" placeholder="Property Name" required>
+    <select id="parentCategory">
+      <option value="">Ana Kategori Seçiniz</option>
+      ${categoryOptions}
+    </select>
+    <div class="radioButtons" style="display:inline-flex; justify-content:center;">
+      <input type="radio" id="singleSelect" value="singleSelect" name="select">
+      <label for="singleSelect">Tekli Seçim</label><br>
+      <input type="radio" id="multiSelect" value="multiSelect" name="select">
+      <label for="multiSelect">Çoklu Seçim</label><br>
+    </div>
+    <br >
+    <div style="display:flex; justify-content:center;">
+      <button onclick="submitCategory()">Kaydet</button>
+      <button onclick="closeForm()">İptal</button>
+    </div>
+  `;
+  formOverlay.style.display = "flex";
+};
+
+// Fetch categories for the dropdown
+async function fetchCategoriesForDropdown() {
+  try {
+    const cq = query(collection(db, "categories"), orderBy("order"));
+    const categoriesSnapshot = await getDocs(cq);
+    const categories = categoriesSnapshot.docs.map((doc) => doc.data());
+    return categories;
+  } catch (error) {
+    console.error("Error fetching categories for dropdown:", error);
+    return [];
+  }
+}
+
+// Submit category
+window.submitCategory = async function () {
+  const categoryTitle = document.getElementById("categoryTitle").value;
+  const propertyName = document.getElementById("propertyName").value;
+  const parentCategory = document.getElementById("parentCategory").value;
+  const selectValue = document.querySelector(
+    `input[name="select"]:checked`
+  ).value;
+
+  if (!categoryTitle || !propertyName) {
+    alert("Tüm alanları doldurun!");
+    return;
   }
 
-  // Update the section header
-  document.getElementById("sectionHeader").textContent =
-    sectionConfig[section]?.title || "Section";
+  try {
+    let categoryId;
+
+    if (currentItem) {
+      categoryId = currentItem;
+    } else {
+      categoryId = await updateID();
+    }
+    const collectionRef = collection(db, "categories");
+    const querySnapshot = await getDocs(collectionRef);
+    const orderValue = querySnapshot.size + 1;
+    await setDoc(
+      doc(db, "categories", categoryId),
+      {
+        title: categoryTitle,
+        propertyName: propertyName,
+        parentCategory: parentCategory,
+        select: selectValue,
+        order: orderValue,
+      },
+      { merge: true }
+    );
+
+    closeForm();
+    fetchItems("categories");
+    currentItem = null;
+  } catch (error) {
+    console.error("Error submitting category:", error);
+  }
 };
 
 // Fetch and render items
@@ -155,29 +214,36 @@ const fetchItems = async (section) => {
       )
       .join("");
   } else if (section === "categories") {
-    const q = query(collection(db,"categories"),orderBy("order"));
+    const q = query(collection(db, "categories"), orderBy("order"));
     const categoriesSnapshot = await getDocs(q);
     itemListHTML = categoriesSnapshot.docs
       .map((doc) => {
         const category = doc.data();
+        const parentCategory = category.parentCategory || ""; // parentCategory'yi category'den al
         return `
-        <div class="item-box" data-id="${doc.id}">
+         <div class="item-box" data-id="${doc.id}">
           <h3>${category.title}</h3>
           <p>Kısaltma Adı: ${category.propertyName}</p>
           <p>Seçme: ${category.select}</p>
+          <p>Ana Kategori: ${
+            parentCategory !== "" ? parentCategory : "Ana Kategori"
+          }</p>
           <button onclick="editCategory('${doc.id}')">Edit</button>
-          <button onclick="confirmDeleteCategory('${doc.id}')" class="delete-btn">Delete</button>
+          <button onclick="confirmDeleteCategory('${
+            doc.id
+          }')" class="delete-btn">Delete</button>
         </div>
       `;
       })
       .join("");
   } else {
-    const qe = query(collection(db,section),orderBy("order"))
+    // Normal section için ürünleri getir
+    const qe = query(collection(db, section), orderBy("order"));
     const querySnapshot = await getDocs(qe);
     itemListHTML = querySnapshot.docs
-    .map((doc) => {
-      const item = doc.data();
-      return `
+      .map((doc) => {
+        const item = doc.data();
+        return `
         <div class="item-box" data-id="${doc.id}">
           <h3>${item.name || "Unnamed Item"}</h3>
           <div class="image-container">
@@ -186,20 +252,103 @@ const fetchItems = async (section) => {
           <p>Fiyat: ${item.price}</p>
           <p>Boyut: ${item.size}</p>
           <p>Açıklama: ${item.description}</p>
-          <p><p>Tag: ${Array.isArray(item.tag) ? item.tag.join(', ') : item.tag}</p>
-          </p> <!-- Tagleri virgülle ayrılmış olarak göster -->
+          <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
           <button onclick="editItem('${doc.id}')">Edit</button>
           <button onclick="confirmDelete('${doc.id}')" class="delete-btn">Delete</button>
         </div>
       `;
-    })
-    .join("");
+      })
+      .join("");
+
+    // Alt kategorileri getir
+    const categories = await fetchCategoriesForDropdown();
+    const subCategories = categories.filter(cat => cat.parentCategory === section);
+    const mainContent = document.getElementById("mainContent");
+    
+    
+
+    if (subCategories.length > 0) {
+      
+      const subCatItemListHTML = document.createElement("div");
+      subCatItemListHTML.classList.add("sortable-list"); 
+      subCatItemListHTML.setAttribute("id","itemList")
+      document.getElementById("mainContent").appendChild(subCatItemListHTML);
+      for (const subCat of subCategories) {
+        subCatItemListHTML.innerHTML += `
+        <hr style="margin: 20px 0;">
+          <div class="item-box">
+            <h3>${subCat.title}</h3>
+            <button onclick="showSubCategoryForm('${subCat.propertyName}')">
+              ${subCat.title}'ye Ürün Ekle
+            </button>
+            <div id="subCategory-${subCat.propertyName}" class="sub-category-items">
+              ${await fetchSubCategoryItems(subCat.propertyName)}
+            </div>
+          </div>
+        `;
+      }
+    }
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
   initSortable();
 };
+async function fetchSubCategoryItems(subCategoryName) {
+  try {
+    const qe = query(collection(db, subCategoryName), orderBy("order"));
+    const querySnapshot = await getDocs(qe);
+    return querySnapshot.docs
+      .map((doc) => {
+        const item = doc.data();
+        return `
+          <div class="item-box " data-id="${doc.id}">
+            <h3>${item.name || "Unnamed Item"}</h3>
+            <div class="image-container">
+              <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
+            </div>
+            <p>Fiyat: ${item.price}</p>
+            <p>Boyut: ${item.size}</p>
+            <p>Açıklama: ${item.description}</p>
+            <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
+            <button onclick="editSubCategoryItem('${doc.id}', '${subCategoryName}')">Edit</button>
+            <button onclick="confirmDeleteSubCategoryItem('${doc.id}', '${subCategoryName}')" class="delete-btn">Delete</button>
+          </div>
+        `;
+      })
+      .join("");
+  } catch (error) {
+    console.error("Alt kategori ürünleri yüklenirken hata:", error);
+    return "";
+  }
+}
 
+// Alt kategori için ürün ekleme formunu göster
+window.showSubCategoryForm = function(subCategoryName) {
+  currentSection = subCategoryName; // Geçerli section'ı alt kategori olarak ayarla
+  showForm(false); // Normal ürün formunu göster
+};
+
+// Alt kategori ürününü düzenleme
+window.editSubCategoryItem = function(itemId, subCategoryName) {
+  currentSection = subCategoryName;
+  editItem(itemId);
+};
+
+// Alt kategori ürününü silme
+window.confirmDeleteSubCategoryItem = function(itemId, subCategoryName) {
+  if (confirm("Bu ürünü silmek istediğinize emin misiniz?")) {
+    deleteSubCategoryItem(itemId, subCategoryName);
+  }
+};
+
+async function deleteSubCategoryItem(itemId, subCategoryName) {
+  try {
+    await deleteDoc(doc(db, subCategoryName, itemId));
+    fetchItems(currentSection); // Ana kategoriyi yenile
+  } catch (error) {
+    console.error("Alt kategori ürünü silinirken hata:", error);
+  }
+}
 // Kategorileri yükledikten sonra content'i göster
 window.showContent = async function (section) {
   currentSection = section;
@@ -214,7 +363,27 @@ window.showContent = async function (section) {
   document.getElementById("sectionHeader").textContent =
     sectionConfig[section]?.title || "Section"; // Varsayılan başlık
 };
+const updateHeaderAndButtons = (section) => {
+  const addItemBtn = document.getElementById("addItemBtn");
 
+  if (section === "orders") {
+    addItemBtn.style.display = "none";
+  } else if (section === "categories") {
+    addItemBtn.style.display = "block";
+    addItemBtn.innerText = "Kategori Ekle";
+    addItemBtn.onclick = () => showCategoryForm(false); // Kategori ekleme modunda formu göster
+
+
+  } else {
+    addItemBtn.style.display = "block";
+    addItemBtn.innerText = "Ürün Ekle";
+    addItemBtn.onclick = showForm; // Ürün ekleme modunda formu göster
+  }
+
+  // Update the section header
+  document.getElementById("sectionHeader").textContent =
+    sectionConfig[section]?.title || "Section";
+};
 // Show form for adding/editing items
 window.showForm = async function (edit = false) {
   updateID(); // ID'yi güncelle
@@ -259,6 +428,22 @@ window.showForm = async function (edit = false) {
   }
 };
 
+// Ürün silme
+const deleteItem = async (itemID) => {
+  try {
+    await deleteDoc(doc(db, currentSection, itemID)); // Firestore'dan sil
+    fetchItems(currentSection); // Ürün listesini güncelle
+  } catch (error) {
+    console.error("Ürün silme hatası:", error);
+  }
+};
+window.confirmDelete = async function (itemID) {
+  const confirmed = confirm("Bu ürünü silmek istediğinize emin misiniz?");
+  if (confirmed) {
+    await deleteItem(itemID);
+  }
+};
+// Ürün düzenleme
 window.editItem = async function (itemId) {
   try {
     const docRef = doc(db, currentSection, itemId);
@@ -308,6 +493,8 @@ window.editItem = async function (itemId) {
     console.error("Ürün düzenleme hatası:", error);
   }
 };
+
+// Formu temizleme fonksiyonu
 function clearFormFields() {
   document.getElementById("name").value = "";
   document.getElementById("price").value = "";
@@ -327,15 +514,18 @@ window.updateID = async function () {
   }
 };
 
+// Ürün gönderme fonksiyonu
 window.submitItem = async function () {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
   const description = document.getElementById("description").value; // Açıklamayı al
-  const tag = document.getElementById("tag").value.split(',').map(t => t.trim());
+  const tag = document
+    .getElementById("tag")
+    .value.split(",")
+    .map((t) => t.trim());
   // Tagleri dizi olarak al
   const imageFile = document.getElementById("imageFile").files[0];
-  
 
   if (!name || !price || !size || !description) {
     alert("Lütfen ürün adı, fiyat ve boyut alanlarını doldurun!");
@@ -393,88 +583,14 @@ window.submitItem = async function () {
   }
 };
 
-
-
 // Formu kapatma fonksiyonu
 window.closeForm = function () {
   const formOverlay = document.getElementById("formOverlay");
   formOverlay.style.display = "none";
 };
 
-// Kategori formunu gösterme
-window.showCategoryForm = function (edit = false) {
-  const formOverlay = document.getElementById("formOverlay");
-  const formContainer = document.getElementById("formContainer");
-
-  formContainer.innerHTML = `
-    <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Kategori</h2>
-    <input type="text" id="categoryTitle" placeholder="Kategori Başlığı" required>
-    <input type="text" id="propertyName" placeholder="Property Name" required>
-    <div class="radioButtons" style="display:inline-flex; justify-content:center;">
-    <input type="radio" id="singleSelect" value="singleSelect" name="select">
-    <label for="singleSelect">Tekli Seçim</label><br>
-    <input type="radio" id="multiSelect" value="multiSelect" name="select">
-    <label for="multiSelect">Çoklu Seçim</label><br>
-    </div>
-    <br>
-    <div style="display:flex; justify-content:center;">
-    <button onclick="submitCategory()">Kaydet</button>
-    <button onclick="closeForm()">İptal</button>
-    </div>
-  `;
-  formOverlay.style.display = "flex";
-  
-};
-
-// Kategori gönderme fonksiyonu
-// Kategori gönderme fonksiyonu
-window.submitCategory = async function () {
-  const categoryTitle = document.getElementById("categoryTitle").value;
-  const propertyName = document.getElementById("propertyName").value;
-  const selectValue = document.querySelector(`input[name="select"]:checked`).value;
-
-  if (!categoryTitle || !propertyName) {
-    alert("Tüm alanları doldurun!");
-    return;
-  }
-
-  try {
-    let categoryId;
-
-    // Eğer mevcut bir kategori düzenleniyorsa, ID'yi kullanıyoruz
-    if (currentItem) {
-      categoryId = currentItem;
-    } else {
-      // Yeni bir kategori ekliyorsak, yeni ID oluştur
-      categoryId = await updateID();
-    }
-    const collectionRef = collection(db, "categories");
-    const querySnapshot = await getDocs(collectionRef);
-    const orderValue = querySnapshot.size + 1; // Mevcut belge sayısını al
-    // Kategoriyi güncelle veya ekle
-    await setDoc(
-      doc(db, "categories", categoryId),
-      {
-        title: categoryTitle,
-        propertyName: propertyName,
-        select: selectValue,
-        order:orderValue,
-      },
-      { merge: true }
-    ); // Mevcut kategori varsa güncelle, yeni alanları ekle
-
-    closeForm();
-    fetchItems("categories"); // Kategorileri güncelle
-    // location.reload();
-    // updateSidebarMenu();
-    currentItem = null; // Düzenleme tamamlandıktan sonra currentItem'ı sıfırla
-  } catch (error) {
-    console.error("Hata:", error);
-  }
-};
-
 // Kategoriyi düzenleme fonksiyonu
-// Kategoriyi düzenleme fonksiyonu
+// Kategori düzenleme fonksiyonu
 window.editCategory = async function (categoryId) {
   try {
     // Öncelikle Firestore'daki kategoriyi alıyoruz
@@ -488,20 +604,41 @@ window.editCategory = async function (categoryId) {
       currentItem = categoryId;
 
       // Formu düzenleme modunda açıyoruz
-      showCategoryForm(true);
+      await showCategoryForm(true); // showCategoryForm'un Promise döndürdüğünden emin olun
 
-      // Form açıldıktan sonra DOM'daki alanlara verileri yerleştiriyoruz
-      setTimeout(() => {
-        document.getElementById("categoryTitle").value = category.title || "";
-        document.getElementById("propertyName").value =
-          category.propertyName || "";
-          if (category.select === "singleSelect") {
-            document.getElementById("singleSelect").checked = true;
-          } else if (category.select === "multiSelect") {
-            document.getElementById("multiSelect").checked = true;
+      // Form elemanlarının yüklenmesini bekleyin
+      await new Promise(resolve => {
+        const checkElements = () => {
+          const titleInput = document.getElementById("categoryTitle");
+          const propertyInput = document.getElementById("propertyName");
+          const singleSelect = document.getElementById("singleSelect");
+          const multiSelect = document.getElementById("multiSelect");
+          const parentSelect = document.getElementById("parentCategory");
+
+          if (titleInput && propertyInput && singleSelect && multiSelect && parentSelect) {
+            resolve();
+          } else {
+            setTimeout(checkElements, 100);
           }
-          // document.getElementById("selectValue").value = category.select || "";
-      }, 0); // Bu gecikme, formun tamamen yüklenmesini sağlar.
+        };
+        checkElements();
+      });
+
+      // Form elemanları hazır olduğunda verileri yerleştir
+      document.getElementById("categoryTitle").value = category.title || "";
+      document.getElementById("propertyName").value = category.propertyName || "";
+
+      // Seçim alanını doldur
+      if (category.select === "singleSelect") {
+        document.getElementById("singleSelect").checked = true;
+      } else if (category.select === "multiSelect") {
+        document.getElementById("multiSelect").checked = true;
+      }
+
+      // Ana kategori seçimi
+      const parentCategorySelect = document.getElementById("parentCategory");
+      parentCategorySelect.value = category.parentCategory || "";
+
     } else {
       console.error("Kategori bulunamadı!");
     }
@@ -514,8 +651,6 @@ window.editCategory = async function (categoryId) {
 window.confirmDeleteCategory = function (categoryId) {
   if (confirm("Bu kategoriyi silmek istediğinizden emin misiniz?")) {
     deleteCategory(categoryId);
-    // location.reload(); 
-    // updateSidebarMenu();
   }
 };
 
@@ -528,18 +663,22 @@ async function deleteCategory(categoryId) {
     console.error("Hata:", error);
   }
 }
+
 // Ürün düzenleme fonksiyonu
 const initSortable = () => {
   const itemList = document.getElementById("itemList");
-  
+
   Sortable.create(itemList, {
     animation: 150,
     onEnd: async (evt) => {
-      const itemIDs = Array.from(itemList.children).map(item => item.dataset.id);
+      const itemIDs = Array.from(itemList.children).map(
+        (item) => item.dataset.id
+      );
       await updateItemOrder(itemIDs);
-    }
+    },
   });
 };
+
 const updateItemOrder = async (itemIDs) => {
   try {
     // Hangi öğelerin sıralandığını kontrol et
@@ -551,17 +690,18 @@ const updateItemOrder = async (itemIDs) => {
         console.error("Geçersiz ID bulundu:", id);
         return; // Geçersiz ID varsa işlemi atla
       }
-      
+
       const itemRef = doc(db, currentSection, id); // currentSection'ın geçerli olduğundan emin olun
       batch.update(itemRef, { order: index }); // Yeni sıralama bilgisi
     });
-    
+
     await batch.commit();
     console.log("Sıralama güncellendi.");
   } catch (error) {
     console.error("Sıralama güncellenirken hata:", error);
   }
 };
+
 // Sayfa yüklendiğinde default içerik göster
 window.onload = async function () {
   sectionConfig = await fetchSectionConfig();
