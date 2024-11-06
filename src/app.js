@@ -85,8 +85,8 @@ const updateSidebarMenu = async () => {
 
   // Sadece ana kategorileri (parentCategory'si olmayanları) sidebar'a ekle
   const categories = await fetchCategoriesForDropdown();
-  const mainCategories = categories.filter(cat => !cat.parentCategory);
-  
+  const mainCategories = categories.filter((cat) => !cat.parentCategory);
+
   for (let category of mainCategories) {
     sidebarHTML += `
       <h2 onclick="showContent('${category.propertyName}')" class="sidebar-item">
@@ -121,12 +121,28 @@ window.showCategoryForm = async function (edit = false) {
       <option value="">Ana Kategori Seçiniz</option>
       ${categoryOptions}
     </select>
-    <div class="radioButtons" style="display:inline-flex; justify-content:center;">
-      <input type="radio" id="singleSelect" value="singleSelect" name="select">
-      <label for="singleSelect">Tekli Seçim</label><br>
-      <input type="radio" id="multiSelect" value="multiSelect" name="select">
-      <label for="multiSelect">Çoklu Seçim</label><br>
+    <div class="radioGroup">
+      <h4>Seçim Tipi:</h4>
+      <div class="radioButtons" style="display:inline-flex; justify-content:center;">
+        <input type="radio" id="singleSelect" value="singleSelect" name="select">
+        <label for="singleSelect">Tekli Seçim</label><br>
+        <input type="radio" id="multiSelect" value="multiSelect" name="select">
+        <label for="multiSelect">Çoklu Seçim</label><br>
+      </div>
     </div>
+
+    <div class="radioGroup">
+      <h4>Fiyat Biçimi:</h4>
+      <div class="radioButtons" style="display:inline-flex; justify-content:center;">
+        <input type="radio" id="tekil" value="tekil" name="priceFormat">
+        <label for="tekil">Tekil</label><br>
+        <input type="radio" id="metrekare" value="metrekare" name="priceFormat">
+        <label for="metrekare">Metrekare</label><br>
+        <input type="radio" id="cevre" value="cevre" name="priceFormat">
+        <label for="cevre">Çevre</label><br>
+      </div>
+    </div>
+     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
     <br >
     <div style="display:flex; justify-content:center;">
       <button onclick="submitCategory()">Kaydet</button>
@@ -156,9 +172,16 @@ window.submitCategory = async function () {
   const parentCategory = document.getElementById("parentCategory").value;
   const selectValue = document.querySelector(
     `input[name="select"]:checked`
-  ).value;
+  )?.value;
+  const priceFormat = document.querySelector(
+    `input[name="priceFormat"]:checked`
+  )?.value;
+  const tags = document
+    .getElementById("categoryTags")
+    .value.split(",")
+    .map((tag) => tag.trim());
 
-  if (!categoryTitle || !propertyName) {
+  if (!categoryTitle || !propertyName || !selectValue || !priceFormat) {
     alert("Tüm alanları doldurun!");
     return;
   }
@@ -181,7 +204,9 @@ window.submitCategory = async function () {
         propertyName: propertyName,
         parentCategory: parentCategory,
         select: selectValue,
+        priceFormat: priceFormat,
         order: orderValue,
+        tags: tags,
       },
       { merge: true }
     );
@@ -194,10 +219,12 @@ window.submitCategory = async function () {
   }
 };
 
-// Fetch and render items
+
 const fetchItems = async (section) => {
   let itemListHTML = "";
-
+  let mainContent = document.getElementById("mainContent");
+  let subCatDiv = document.getElementById("subCatDiv");
+  subCatDiv.innerHTML = "";
   if (section === "home") {
     const sidebarItems = Object.keys(sectionConfig).map((key) => ({
       name: sectionConfig[key].title,
@@ -220,18 +247,23 @@ const fetchItems = async (section) => {
       .map((doc) => {
         const category = doc.data();
         const parentCategory = category.parentCategory || ""; // parentCategory'yi category'den al
+        const tags = category.tags ? category.tags.join(", ") : "";
         return `
          <div class="item-box" data-id="${doc.id}">
           <h3>${category.title}</h3>
           <p>Kısaltma Adı: ${category.propertyName}</p>
           <p>Seçme: ${category.select}</p>
+          <p>Fiyat Biçimi: ${category.priceFormat || "Belirtilmemiş"}</p>
           <p>Ana Kategori: ${
             parentCategory !== "" ? parentCategory : "Ana Kategori"
           }</p>
+           <p>Etiketler: ${tags}</p>
+           <div class="ort">
           <button onclick="editCategory('${doc.id}')">Edit</button>
           <button onclick="confirmDeleteCategory('${
             doc.id
           }')" class="delete-btn">Delete</button>
+          </div>
         </div>
       `;
       })
@@ -251,10 +283,19 @@ const fetchItems = async (section) => {
           </div>
           <p>Fiyat: ${item.price}</p>
           <p>Boyut: ${item.size}</p>
+           ${
+             item.width || item.height
+               ? `<p>Ölçüler: ${item.width || "-"}x${item.height || "-"} m</p>`
+               : ""
+           }
           <p>Açıklama: ${item.description}</p>
-          <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
+          <p>Tag: ${
+            Array.isArray(item.tag) ? item.tag.join(", ") : item.tag
+          }</p>
           <button onclick="editItem('${doc.id}')">Edit</button>
-          <button onclick="confirmDelete('${doc.id}')" class="delete-btn">Delete</button>
+          <button onclick="confirmDelete('${
+            doc.id
+          }')" class="delete-btn">Delete</button>
         </div>
       `;
       })
@@ -262,32 +303,32 @@ const fetchItems = async (section) => {
 
     // Alt kategorileri getir
     const categories = await fetchCategoriesForDropdown();
-    const subCategories = categories.filter(cat => cat.parentCategory === section);
-    const mainContent = document.getElementById("mainContent");
-    
-    
-
+    const subCategories = categories.filter(
+      (cat) => cat.parentCategory === section
+    );
+    const subCatDivs = document.createElement("div");
+    subCatDiv.appendChild(subCatDivs);
+    subCatDivs.setAttribute("id","subCatDiv")
     if (subCategories.length > 0) {
-      
-      const subCatItemListHTML = document.createElement("div");
-      subCatItemListHTML.classList.add("sortable-list"); 
-      subCatItemListHTML.setAttribute("id","itemList")
-      document.getElementById("mainContent").appendChild(subCatItemListHTML);
       for (const subCat of subCategories) {
-        subCatItemListHTML.innerHTML += `
-        <hr style="margin: 20px 0;">
-          <div class="item-box">
-            <h3>${subCat.title}</h3>
-            <button onclick="showSubCategoryForm('${subCat.propertyName}')">
-              ${subCat.title}'ye Ürün Ekle
-            </button>
-            <div id="subCategory-${subCat.propertyName}" class="sub-category-items">
+        
+        subCatDivs.innerHTML += `
+        <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${
+          subCat.propertyName
+        }')" >${subCat.title}'ye Ürün Ekle</button>
+        <h2 class="section-header">${subCat.title}</h2>
+            <div id="itemList-${
+              subCat.propertyName
+            }" class="sortable-list itemList">
               ${await fetchSubCategoryItems(subCat.propertyName)}
             </div>
-          </div>
+
         `;
       }
+
+      initSortable(subCategories);
     }
+   
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
@@ -301,17 +342,32 @@ async function fetchSubCategoryItems(subCategoryName) {
       .map((doc) => {
         const item = doc.data();
         return `
-          <div class="item-box " data-id="${doc.id}">
+          <div class="item-box" data-id="${doc.id}">
             <h3>${item.name || "Unnamed Item"}</h3>
             <div class="image-container">
-              <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
+              <img src="${item.imageUrl}" alt="${
+          item.name
+        }" class="item-image"/>
             </div>
             <p>Fiyat: ${item.price}</p>
             <p>Boyut: ${item.size}</p>
+             ${
+               item.width || item.height
+                 ? `<p>Ölçüler: ${item.width || "-"}x${
+                     item.height || "-"
+                   } m</p>`
+                 : ""
+             }
             <p>Açıklama: ${item.description}</p>
-            <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
-            <button onclick="editSubCategoryItem('${doc.id}', '${subCategoryName}')">Edit</button>
-            <button onclick="confirmDeleteSubCategoryItem('${doc.id}', '${subCategoryName}')" class="delete-btn">Delete</button>
+            <p>Tag: ${
+              Array.isArray(item.tag) ? item.tag.join(", ") : item.tag
+            }</p>
+            <button onclick="editSubCategoryItem('${
+              doc.id
+            }', '${subCategoryName}')">Edit</button>
+            <button onclick="confirmDeleteSubCategoryItem('${
+              doc.id
+            }', '${subCategoryName}')" class="delete-btn">Delete</button>
           </div>
         `;
       })
@@ -323,19 +379,19 @@ async function fetchSubCategoryItems(subCategoryName) {
 }
 
 // Alt kategori için ürün ekleme formunu göster
-window.showSubCategoryForm = function(subCategoryName) {
+window.showSubCategoryForm = function (subCategoryName) {
   currentSection = subCategoryName; // Geçerli section'ı alt kategori olarak ayarla
   showForm(false); // Normal ürün formunu göster
 };
 
 // Alt kategori ürününü düzenleme
-window.editSubCategoryItem = function(itemId, subCategoryName) {
+window.editSubCategoryItem = function (itemId, subCategoryName) {
   currentSection = subCategoryName;
   editItem(itemId);
 };
 
 // Alt kategori ürününü silme
-window.confirmDeleteSubCategoryItem = function(itemId, subCategoryName) {
+window.confirmDeleteSubCategoryItem = function (itemId, subCategoryName) {
   if (confirm("Bu ürünü silmek istediğinize emin misiniz?")) {
     deleteSubCategoryItem(itemId, subCategoryName);
   }
@@ -372,8 +428,6 @@ const updateHeaderAndButtons = (section) => {
     addItemBtn.style.display = "block";
     addItemBtn.innerText = "Kategori Ekle";
     addItemBtn.onclick = () => showCategoryForm(false); // Kategori ekleme modunda formu göster
-
-
   } else {
     addItemBtn.style.display = "block";
     addItemBtn.innerText = "Ürün Ekle";
@@ -395,6 +449,10 @@ window.showForm = async function (edit = false) {
     <input type="text" id="name" placeholder="Ürün Adı" required>
     <input type="number" id="price" required placeholder="Fiyat">
     <input type="text" id="size" required placeholder="Boyut">
+      <div style="display: flex; gap: 10px;">
+      <input type="number" id="width" placeholder="En (cm)" min="0" step="0.1">
+      <input type="number" id="height" placeholder="Boy (cm)" min="0" step="0.1">
+    </div>
     <input type="text" id="description" placeholder="Açıklama">
     <input type="text" id="tag" required placeholder="Etiketleri virgül ile ayırınız.">
     <input type="file" id="imageFile" accept="image/*">
@@ -413,6 +471,8 @@ window.showForm = async function (edit = false) {
           document.getElementById("name").value = item.name || "";
           document.getElementById("price").value = item.price || "";
           document.getElementById("size").value = item.size || "";
+          document.getElementById("width").value = item.width || "";
+          document.getElementById("height").value = item.height || "";
           document.getElementById("description").value = item.description || "";
           document.getElementById("tag").value = item.tag || "";
           document
@@ -499,6 +559,9 @@ function clearFormFields() {
   document.getElementById("name").value = "";
   document.getElementById("price").value = "";
   document.getElementById("size").value = "";
+  document.getElementById("width").value = "";
+  document.getElementById("height").value = "";
+  document.getElementById("description").value = "";
   document.getElementById("tag").value = "";
   document.getElementById("imageFile").value = ""; // File input'u temizle
 }
@@ -519,6 +582,8 @@ window.submitItem = async function () {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
+  const width = document.getElementById("width").value;
+  const height = document.getElementById("height").value;
   const description = document.getElementById("description").value; // Açıklamayı al
   const tag = document
     .getElementById("tag")
@@ -567,6 +632,8 @@ window.submitItem = async function () {
         name,
         price,
         size,
+        width: width || null,
+        height: height || null,
         description,
         tag, // Tag alanını dizi olarak kaydet
         imageUrl,
@@ -589,7 +656,6 @@ window.closeForm = function () {
   formOverlay.style.display = "none";
 };
 
-// Kategoriyi düzenleme fonksiyonu
 // Kategori düzenleme fonksiyonu
 window.editCategory = async function (categoryId) {
   try {
@@ -599,23 +665,27 @@ window.editCategory = async function (categoryId) {
 
     if (docSnap.exists()) {
       const category = docSnap.data();
-
-      // Kategori formunu açmadan önce currentItem'ı set ediyoruz
       currentItem = categoryId;
-
-      // Formu düzenleme modunda açıyoruz
-      await showCategoryForm(true); // showCategoryForm'un Promise döndürdüğünden emin olun
-
-      // Form elemanlarının yüklenmesini bekleyin
-      await new Promise(resolve => {
+      await showCategoryForm(true);
+      await new Promise((resolve) => {
         const checkElements = () => {
           const titleInput = document.getElementById("categoryTitle");
           const propertyInput = document.getElementById("propertyName");
           const singleSelect = document.getElementById("singleSelect");
           const multiSelect = document.getElementById("multiSelect");
           const parentSelect = document.getElementById("parentCategory");
+          const priceFormatInputs = document.querySelectorAll(
+            'input[name="priceFormat"]'
+          );
 
-          if (titleInput && propertyInput && singleSelect && multiSelect && parentSelect) {
+          if (
+            titleInput &&
+            propertyInput &&
+            singleSelect &&
+            multiSelect &&
+            parentSelect &&
+            priceFormatInputs.length
+          ) {
             resolve();
           } else {
             setTimeout(checkElements, 100);
@@ -626,19 +696,25 @@ window.editCategory = async function (categoryId) {
 
       // Form elemanları hazır olduğunda verileri yerleştir
       document.getElementById("categoryTitle").value = category.title || "";
-      document.getElementById("propertyName").value = category.propertyName || "";
-
-      // Seçim alanını doldur
+      document.getElementById("propertyName").value =
+        category.propertyName || "";
+      document.getElementById("categoryTags").value = category.tags
+        ? category.tags.join(", ")
+        : "";
       if (category.select === "singleSelect") {
         document.getElementById("singleSelect").checked = true;
       } else if (category.select === "multiSelect") {
         document.getElementById("multiSelect").checked = true;
       }
+      if (category.priceFormat) {
+        document.querySelector(
+          `input[value="${category.priceFormat}"]`
+        ).checked = true;
+      }
 
       // Ana kategori seçimi
       const parentCategorySelect = document.getElementById("parentCategory");
       parentCategorySelect.value = category.parentCategory || "";
-
     } else {
       console.error("Kategori bulunamadı!");
     }
@@ -665,34 +741,55 @@ async function deleteCategory(categoryId) {
 }
 
 // Ürün düzenleme fonksiyonu
-const initSortable = () => {
-  const itemList = document.getElementById("itemList");
+const initSortable = (subCategories) => {
+  // Ana kategori için Sortable
+  const mainItemList = document.getElementById("itemList");
+  if (mainItemList) {
+    Sortable.create(mainItemList, {
+      animation: 150,
+      onEnd: async (evt) => {
+        const itemIDs = Array.from(mainItemList.children).map(
+          (item) => item.dataset.id
+        );
+        await updateItemOrder(itemIDs, currentSection);
+      },
+    });
+  }
 
-  Sortable.create(itemList, {
-    animation: 150,
-    onEnd: async (evt) => {
-      const itemIDs = Array.from(itemList.children).map(
-        (item) => item.dataset.id
+  // Alt kategoriler için Sortable
+  if (subCategories && subCategories.length > 0) {
+    subCategories.forEach((subCat) => {
+      const subItemList = document.getElementById(
+        `itemList-${subCat.propertyName}`
       );
-      await updateItemOrder(itemIDs);
-    },
-  });
+      if (subItemList) {
+        Sortable.create(subItemList, {
+          animation: 150,
+          onEnd: async (evt) => {
+            const itemIDs = Array.from(subItemList.children).map(
+              (item) => item.dataset.id
+            );
+            await updateItemOrder(itemIDs, subCat.propertyName);
+          },
+        });
+      }
+    });
+  }
 };
 
-const updateItemOrder = async (itemIDs) => {
+const updateItemOrder = async (itemIDs, section) => {
   try {
-    // Hangi öğelerin sıralandığını kontrol et
-    console.log("Sıralanan öğe ID'leri:", itemIDs);
+    console.log("Sıralanan öğe ID'leri:", itemIDs, "Section:", section);
 
     const batch = writeBatch(db);
     itemIDs.forEach((id, index) => {
       if (!id) {
         console.error("Geçersiz ID bulundu:", id);
-        return; // Geçersiz ID varsa işlemi atla
+        return;
       }
 
-      const itemRef = doc(db, currentSection, id); // currentSection'ın geçerli olduğundan emin olun
-      batch.update(itemRef, { order: index }); // Yeni sıralama bilgisi
+      const itemRef = doc(db, section, id);
+      batch.update(itemRef, { order: index });
     });
 
     await batch.commit();
@@ -708,3 +805,4 @@ window.onload = async function () {
   updateSidebarMenu();
   showContent(currentSection);
 };
+

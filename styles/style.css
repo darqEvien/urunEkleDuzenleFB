@@ -52,6 +52,11 @@ body {
     margin-bottom: 10px;
     background-color: #333333;
     max-width: 16rem;
+    height: 18rem;
+  }
+  .ort{
+    
+    min-height: 200px;
   }
 
   .item-box h3 {
@@ -166,7 +171,12 @@ body {
 #itemList {
   display: grid;
   align-items: center;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+}
+.itemList {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
 
 /* Delete butonunu kırmızı yapma */
