@@ -97,7 +97,143 @@ const updateSidebarMenu = async () => {
 
   sidebar.innerHTML = sidebarHTML;
 };
+window.editSubCategoryItem = async function(itemId, subCategoryName) {
+  const originalSection = currentSection; // Mevcut section'ı kaydet
+  
+  try {
+    const docRef = doc(db, subCategoryName, itemId);
+    const docSnap = await getDoc(docRef);
 
+    if (docSnap.exists()) {
+      const item = docSnap.data();
+      
+      // Geçici olarak currentSection'ı alt kategori olarak ayarla
+      currentSection = subCategoryName;
+      currentItem = itemId;
+      
+      // Formu düzenleme modunda aç
+      await showForm(true);
+
+      // Form elemanlarını doldur
+      document.getElementById("name").value = item.name || "";
+      document.getElementById("price").value = item.price || "";
+      document.getElementById("size").value = item.size || "";
+      document.getElementById("width").value = item.width || "";
+      document.getElementById("height").value = item.height || "";
+      document.getElementById("description").value = item.description || "";
+      document.getElementById("tag").value = Array.isArray(item.tag) ? item.tag.join(", ") : item.tag || "";
+      
+      if (item.imageUrl) {
+        document.getElementById("imageFile").setAttribute("data-existing-url", item.imageUrl);
+      }
+    }
+  } catch (error) {
+    console.error("Ürün düzenleme hatası:", error);
+  }
+
+  // Form submit işleminden sonra kullanılmak üzere original section'ı sakla
+  document.getElementById("formContainer").setAttribute("data-original-section", originalSection);
+}
+window.closeForm = function() {
+  const formOverlay = document.getElementById("formOverlay");
+  formOverlay.style.display = "none";
+  
+  // Original section'ı geri yükle
+  const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
+  if (originalSection) {
+    currentSection = originalSection;
+    document.getElementById("formContainer").removeAttribute("data-original-section");
+  }
+  
+  currentItem = null;
+  
+  // Form alanlarını temizle
+  clearFormFields();
+}
+
+// Kategori düzenleme fonksiyonu
+window.editCategory = async function (categoryId) {
+  try {
+    // Öncelikle Firestore'daki kategoriyi alıyoruz
+    const docRef = doc(db, "categories", categoryId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const category = docSnap.data();
+      currentItem = categoryId;
+      await showCategoryForm(true);
+      await new Promise((resolve) => {
+        const checkElements = () => {
+          const titleInput = document.getElementById("categoryTitle");
+          const propertyInput = document.getElementById("propertyName");
+          const singleSelect = document.getElementById("singleSelect");
+          const multiSelect = document.getElementById("multiSelect");
+          const parentSelect = document.getElementById("parentCategory");
+          const priceFormatInputs = document.querySelectorAll(
+            'input[name="priceFormat"]'
+          );
+
+          if (
+            titleInput &&
+            propertyInput &&
+            singleSelect &&
+            multiSelect &&
+            parentSelect &&
+            priceFormatInputs.length
+          ) {
+            resolve();
+          } else {
+            setTimeout(checkElements, 100);
+          }
+        };
+        checkElements();
+      });
+
+      // Form elemanları hazır olduğunda verileri yerleştir
+      document.getElementById("categoryTitle").value = category.title || "";
+      document.getElementById("propertyName").value =
+        category.propertyName || "";
+      document.getElementById("categoryTags").value = category.tags
+        ? category.tags.join(", ")
+        : "";
+      if (category.select === "singleSelect") {
+        document.getElementById("singleSelect").checked = true;
+      } else if (category.select === "multiSelect") {
+        document.getElementById("multiSelect").checked = true;
+      }
+      if (category.priceFormat) {
+        document.querySelector(
+          `input[value="${category.priceFormat}"]`
+        ).checked = true;
+      }
+
+      // Ana kategori seçimi
+      const parentCategorySelect = document.getElementById("parentCategory");
+      parentCategorySelect.value = category.parentCategory || "";
+    } else {
+      console.error("Kategori bulunamadı!");
+    }
+  } catch (error) {
+    console.error("Kategori düzenleme hatası:", error);
+  }
+};
+
+// Kategori silme onayı
+window.confirmDeleteCategory = function (categoryId) {
+  if (confirm("Bu kategoriyi silmek istediğinizden emin misiniz?")) {
+    deleteCategory(categoryId);
+  }
+};
+
+// Kategori silme fonksiyonu
+async function deleteCategory(categoryId) {
+  try {
+    await deleteDoc(doc(db, "categories", categoryId));
+    fetchItems("categories"); // Kategorileri güncelle
+  } catch (error) {
+    console.error("Hata:", error);
+  }
+}
 // Show category form
 window.showCategoryForm = async function (edit = false) {
   const formOverlay = document.getElementById("formOverlay");
@@ -219,7 +355,6 @@ window.submitCategory = async function () {
   }
 };
 
-
 const fetchItems = async (section) => {
   let itemListHTML = "";
   let mainContent = document.getElementById("mainContent");
@@ -308,10 +443,9 @@ const fetchItems = async (section) => {
     );
     const subCatDivs = document.createElement("div");
     subCatDiv.appendChild(subCatDivs);
-    subCatDivs.setAttribute("id","subCatDiv")
+    subCatDivs.setAttribute("id", "subCatDiv");
     if (subCategories.length > 0) {
       for (const subCat of subCategories) {
-        
         subCatDivs.innerHTML += `
         <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${
           subCat.propertyName
@@ -328,12 +462,12 @@ const fetchItems = async (section) => {
 
       initSortable(subCategories);
     }
-   
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
   initSortable();
 };
+
 async function fetchSubCategoryItems(subCategoryName) {
   try {
     const qe = query(collection(db, subCategoryName), orderBy("order"));
@@ -345,29 +479,19 @@ async function fetchSubCategoryItems(subCategoryName) {
           <div class="item-box" data-id="${doc.id}">
             <h3>${item.name || "Unnamed Item"}</h3>
             <div class="image-container">
-              <img src="${item.imageUrl}" alt="${
-          item.name
-        }" class="item-image"/>
+              <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
             </div>
             <p>Fiyat: ${item.price}</p>
             <p>Boyut: ${item.size}</p>
-             ${
-               item.width || item.height
-                 ? `<p>Ölçüler: ${item.width || "-"}x${
-                     item.height || "-"
-                   } m</p>`
-                 : ""
-             }
+            ${
+              item.width || item.height
+                ? `<p>Ölçüler: ${item.width || "-"}x${item.height || "-"} m</p>`
+                : ""
+            }
             <p>Açıklama: ${item.description}</p>
-            <p>Tag: ${
-              Array.isArray(item.tag) ? item.tag.join(", ") : item.tag
-            }</p>
-            <button onclick="editSubCategoryItem('${
-              doc.id
-            }', '${subCategoryName}')">Edit</button>
-            <button onclick="confirmDeleteSubCategoryItem('${
-              doc.id
-            }', '${subCategoryName}')" class="delete-btn">Delete</button>
+            <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
+            <button onclick="editSubCategoryItem('${doc.id}', '${subCategoryName}')">Edit</button>
+            <button onclick="confirmDeleteSubCategoryItem('${doc.id}', '${subCategoryName}')" class="delete-btn">Delete</button>
           </div>
         `;
       })
@@ -377,7 +501,6 @@ async function fetchSubCategoryItems(subCategoryName) {
     return "";
   }
 }
-
 // Alt kategori için ürün ekleme formunu göster
 window.showSubCategoryForm = function (subCategoryName) {
   currentSection = subCategoryName; // Geçerli section'ı alt kategori olarak ayarla
@@ -385,22 +508,19 @@ window.showSubCategoryForm = function (subCategoryName) {
 };
 
 // Alt kategori ürününü düzenleme
-window.editSubCategoryItem = function (itemId, subCategoryName) {
-  currentSection = subCategoryName;
-  editItem(itemId);
-};
 
 // Alt kategori ürününü silme
-window.confirmDeleteSubCategoryItem = function (itemId, subCategoryName) {
+window.confirmDeleteSubCategoryItem = function(itemId, subCategoryName) {
   if (confirm("Bu ürünü silmek istediğinize emin misiniz?")) {
     deleteSubCategoryItem(itemId, subCategoryName);
   }
-};
+}
 
-async function deleteSubCategoryItem(itemId, subCategoryName) {
+window.deleteSubCategoryItem = async function(itemId, subCategoryName) {
   try {
     await deleteDoc(doc(db, subCategoryName, itemId));
-    fetchItems(currentSection); // Ana kategoriyi yenile
+    // Ana kategoriyi ve alt kategoriyi yenile
+    await fetchItems(currentSection);
   } catch (error) {
     console.error("Alt kategori ürünü silinirken hata:", error);
   }
@@ -439,7 +559,7 @@ const updateHeaderAndButtons = (section) => {
     sectionConfig[section]?.title || "Section";
 };
 // Show form for adding/editing items
-window.showForm = async function (edit = false) {
+window.showForm = async function(edit = false) {
   updateID(); // ID'yi güncelle
   const formOverlay = document.getElementById("formOverlay");
   const formContainer = document.getElementById("formContainer");
@@ -449,7 +569,7 @@ window.showForm = async function (edit = false) {
     <input type="text" id="name" placeholder="Ürün Adı" required>
     <input type="number" id="price" required placeholder="Fiyat">
     <input type="text" id="size" required placeholder="Boyut">
-      <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px;">
       <input type="number" id="width" placeholder="En (cm)" min="0" step="0.1">
       <input type="number" id="height" placeholder="Boy (cm)" min="0" step="0.1">
     </div>
@@ -474,7 +594,7 @@ window.showForm = async function (edit = false) {
           document.getElementById("width").value = item.width || "";
           document.getElementById("height").value = item.height || "";
           document.getElementById("description").value = item.description || "";
-          document.getElementById("tag").value = item.tag || "";
+          document.getElementById("tag").value = Array.isArray(item.tag) ? item.tag.join(", ") : item.tag || "";
           document
             .getElementById("imageFile")
             .setAttribute("data-existing-url", item.imageUrl || "");
@@ -482,12 +602,11 @@ window.showForm = async function (edit = false) {
       } catch (error) {
         console.error("Ürün yüklenirken hata:", error);
       }
-    }, 200); // 200ms bekleme süresi
+    }, 200);
   } else {
     clearFormFields(); // Formu temizle
   }
-};
-
+}
 // Ürün silme
 const deleteItem = async (itemID) => {
   try {
@@ -519,6 +638,8 @@ window.editItem = async function (itemId) {
       const nameField = document.getElementById("name");
       const priceField = document.getElementById("price");
       const sizeField = document.getElementById("size");
+      const widthField = document.getElementById("width")
+      const heightField =document.getElementById("height")
       const descField = document.getElementById("description");
       const tagField = document.getElementById("tag");
       const imageFileField = document.getElementById("imageFile");
@@ -527,6 +648,8 @@ window.editItem = async function (itemId) {
         !nameField ||
         !priceField ||
         !sizeField ||
+        !widthField ||
+        !heightField ||
         !descField ||
         !tagField ||
         !imageFileField
@@ -539,6 +662,8 @@ window.editItem = async function (itemId) {
       nameField.value = item.name || "";
       priceField.value = item.price || "";
       sizeField.value = item.size || "";
+      widthField.value = item.width || "";
+      heightField.value = item.height || "";
       descField.value = item.description || "";
       tagField.value = item.tag || "";
 
@@ -563,7 +688,8 @@ function clearFormFields() {
   document.getElementById("height").value = "";
   document.getElementById("description").value = "";
   document.getElementById("tag").value = "";
-  document.getElementById("imageFile").value = ""; // File input'u temizle
+  document.getElementById("imageFile").value = "";
+  document.getElementById("imageFile").removeAttribute("data-existing-url");
 }
 
 // Dinamik ID oluşturma
@@ -578,167 +704,69 @@ window.updateID = async function () {
 };
 
 // Ürün gönderme fonksiyonu
-window.submitItem = async function () {
+window.submitItem = async function() {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const size = document.getElementById("size").value;
   const width = document.getElementById("width").value;
   const height = document.getElementById("height").value;
-  const description = document.getElementById("description").value; // Açıklamayı al
-  const tag = document
-    .getElementById("tag")
-    .value.split(",")
-    .map((t) => t.trim());
-  // Tagleri dizi olarak al
+  const description = document.getElementById("description").value;
+  const tag = document.getElementById("tag").value.split(",").map(t => t.trim());
   const imageFile = document.getElementById("imageFile").files[0];
+  const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
 
   if (!name || !price || !size || !description) {
-    alert("Lütfen ürün adı, fiyat ve boyut alanlarını doldurun!");
+    alert("Lütfen gerekli alanları doldurun!");
     return;
   }
 
   try {
-    let itemID;
+    let itemID = currentItem || await updateID();
     let imageUrl = "";
 
-    // Eğer düzenleme modundaysak, mevcut item ID'yi kullan
-    if (currentItem) {
-      itemID = currentItem;
-    } else {
-      // Yeni ürün ekleme modundaysak, yeni bir ID oluştur
-      itemID = await updateID();
-    }
-    const collectionRef = collection(db, currentSection);
-    const querySnapshot = await getDocs(collectionRef);
-    const orderValue = querySnapshot.size + 1; //
-
-    // Resim yükleme işlemi
     if (imageFile) {
       const storageRef = ref(storage, `images/${itemID}`);
       await uploadBytes(storageRef, imageFile);
       imageUrl = await getDownloadURL(storageRef);
-    } else if (
-      document.getElementById("imageFile").hasAttribute("data-existing-url")
-    ) {
-      imageUrl = document
-        .getElementById("imageFile")
-        .getAttribute("data-existing-url");
+    } else if (document.getElementById("imageFile").hasAttribute("data-existing-url")) {
+      imageUrl = document.getElementById("imageFile").getAttribute("data-existing-url");
     }
 
-    // Firestore'daki veriyi güncelleme veya ekleme
-    await setDoc(
-      doc(db, currentSection, itemID),
-      {
-        name,
-        price,
-        size,
-        width: width || null,
-        height: height || null,
-        description,
-        tag, // Tag alanını dizi olarak kaydet
-        imageUrl,
-        order: orderValue,
-      },
-      { merge: true }
-    );
+    const collectionRef = collection(db, currentSection);
+    const querySnapshot = await getDocs(collectionRef);
+    const orderValue = currentItem ? (await getDoc(doc(db, currentSection, currentItem))).data()?.order : querySnapshot.size + 1;
+
+    await setDoc(doc(db, currentSection, itemID), {
+      name,
+      price,
+      size,
+      width: width || null,
+      height: height || null,
+      description,
+      tag,
+      imageUrl,
+      order: orderValue
+    }, { merge: true });
 
     closeForm();
-    fetchItems(currentSection);
+    
+    // Ana kategoriyi ve alt kategoriyi yenile
+    if (originalSection && originalSection !== currentSection) {
+      await fetchItems(originalSection);
+    } else {
+      await fetchItems(currentSection);
+    }
+
+    // Form verilerini temizle
     currentItem = null;
+    document.getElementById("formContainer").removeAttribute("data-original-section");
   } catch (error) {
     console.error("Ürün kaydedilirken hata:", error);
   }
-};
+}
 
 // Formu kapatma fonksiyonu
-window.closeForm = function () {
-  const formOverlay = document.getElementById("formOverlay");
-  formOverlay.style.display = "none";
-};
 
-// Kategori düzenleme fonksiyonu
-window.editCategory = async function (categoryId) {
-  try {
-    // Öncelikle Firestore'daki kategoriyi alıyoruz
-    const docRef = doc(db, "categories", categoryId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const category = docSnap.data();
-      currentItem = categoryId;
-      await showCategoryForm(true);
-      await new Promise((resolve) => {
-        const checkElements = () => {
-          const titleInput = document.getElementById("categoryTitle");
-          const propertyInput = document.getElementById("propertyName");
-          const singleSelect = document.getElementById("singleSelect");
-          const multiSelect = document.getElementById("multiSelect");
-          const parentSelect = document.getElementById("parentCategory");
-          const priceFormatInputs = document.querySelectorAll(
-            'input[name="priceFormat"]'
-          );
-
-          if (
-            titleInput &&
-            propertyInput &&
-            singleSelect &&
-            multiSelect &&
-            parentSelect &&
-            priceFormatInputs.length
-          ) {
-            resolve();
-          } else {
-            setTimeout(checkElements, 100);
-          }
-        };
-        checkElements();
-      });
-
-      // Form elemanları hazır olduğunda verileri yerleştir
-      document.getElementById("categoryTitle").value = category.title || "";
-      document.getElementById("propertyName").value =
-        category.propertyName || "";
-      document.getElementById("categoryTags").value = category.tags
-        ? category.tags.join(", ")
-        : "";
-      if (category.select === "singleSelect") {
-        document.getElementById("singleSelect").checked = true;
-      } else if (category.select === "multiSelect") {
-        document.getElementById("multiSelect").checked = true;
-      }
-      if (category.priceFormat) {
-        document.querySelector(
-          `input[value="${category.priceFormat}"]`
-        ).checked = true;
-      }
-
-      // Ana kategori seçimi
-      const parentCategorySelect = document.getElementById("parentCategory");
-      parentCategorySelect.value = category.parentCategory || "";
-    } else {
-      console.error("Kategori bulunamadı!");
-    }
-  } catch (error) {
-    console.error("Kategori düzenleme hatası:", error);
-  }
-};
-
-// Kategori silme onayı
-window.confirmDeleteCategory = function (categoryId) {
-  if (confirm("Bu kategoriyi silmek istediğinizden emin misiniz?")) {
-    deleteCategory(categoryId);
-  }
-};
-
-// Kategori silme fonksiyonu
-async function deleteCategory(categoryId) {
-  try {
-    await deleteDoc(doc(db, "categories", categoryId));
-    fetchItems("categories"); // Kategorileri güncelle
-  } catch (error) {
-    console.error("Hata:", error);
-  }
-}
 
 // Ürün düzenleme fonksiyonu
 const initSortable = (subCategories) => {
@@ -805,4 +833,3 @@ window.onload = async function () {
   updateSidebarMenu();
   showContent(currentSection);
 };
-
