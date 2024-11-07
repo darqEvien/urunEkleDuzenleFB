@@ -570,8 +570,8 @@ window.showForm = async function(edit = false) {
     <input type="number" id="price" required placeholder="Fiyat">
     <input type="text" id="size" required placeholder="Boyut">
     <div style="display: flex; gap: 10px;">
-      <input type="number" id="width" placeholder="En (cm)" min="0" step="0.1">
-      <input type="number" id="height" placeholder="Boy (cm)" min="0" step="0.1">
+      <input type="text" id="width" placeholder="En (cm)" min="0" step="0.1">
+      <input type="text" id="height" placeholder="Boy (cm)" min="0" step="0.1">
     </div>
     <input type="text" id="description" placeholder="Açıklama">
     <input type="text" id="tag" required placeholder="Etiketleri virgül ile ayırınız.">
