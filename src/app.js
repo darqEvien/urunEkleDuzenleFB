@@ -62,7 +62,7 @@ async function fetchSectionConfig() {
 }
 
 const defaultSections = [
-  { propertyName: "Home", section: "home" },
+  { propertyName: "Anasayfa", section: "home" },
   { propertyName: "Kategoriler", section: "categories" },
   { propertyName: "Siparişler", section: "orders" },
 ];
@@ -404,14 +404,13 @@ const fetchItems = async (section) => {
       })
       .join("");
   } else {
-    // Normal section için ürünleri getir
     const qe = query(collection(db, section), orderBy("order"));
     const querySnapshot = await getDocs(qe);
     itemListHTML = querySnapshot.docs
       .map((doc) => {
         const item = doc.data();
         return `
-        <div class="item-box" data-id="${doc.id}">
+          <div class="item-box" data-id="${doc.id}">
           <h3>${item.name || "Unnamed Item"}</h3>
           <div class="image-container">
             <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
@@ -436,32 +435,16 @@ const fetchItems = async (section) => {
       })
       .join("");
 
-    // Alt kategorileri getir
-    const categories = await fetchCategoriesForDropdown();
-    const subCategories = categories.filter(
-      (cat) => cat.parentCategory === section
-    );
+    // Alt kategorileri recursive olarak getir
     const subCatDivs = document.createElement("div");
     subCatDiv.appendChild(subCatDivs);
     subCatDivs.setAttribute("id", "subCatDiv");
-    if (subCategories.length > 0) {
-      for (const subCat of subCategories) {
-        subCatDivs.innerHTML += `
-        <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${
-          subCat.propertyName
-        }')" >${subCat.title}'ye Ürün Ekle</button>
-        <h2 class="section-header">${subCat.title}</h2>
-            <div id="itemList-${
-              subCat.propertyName
-            }" class="sortable-list itemList">
-              ${await fetchSubCategoryItems(subCat.propertyName)}
-            </div>
+    
+    // Recursive olarak tüm alt kategorileri getir
+    subCatDivs.innerHTML = await fetchSubCategoriesRecursive(section);
 
-        `;
-      }
-
-      initSortable(subCategories);
-    }
+    // Sortable'ı tüm alt kategoriler için başlat
+    initSortableRecursive();
   }
 
   document.getElementById("itemList").innerHTML = itemListHTML;
@@ -500,6 +483,28 @@ async function fetchSubCategoryItems(subCategoryName) {
     console.error("Alt kategori ürünleri yüklenirken hata:", error);
     return "";
   }
+}
+async function fetchSubCategoriesRecursive(parentCategory) {
+  const categories = await fetchCategoriesForDropdown();
+  const subCategories = categories.filter(cat => cat.parentCategory === parentCategory);
+  let html = '';
+
+  for (const subCat of subCategories) {
+    html += `
+      <div class="sub-category-section">
+        <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${subCat.propertyName}')">
+          ${subCat.title}'ye Ürün Ekle
+        </button>
+        <h2 class="section-header">${subCat.title}</h2>
+        <div id="itemList-${subCat.propertyName}" class="sortable-list itemList">
+          ${await fetchSubCategoryItems(subCat.propertyName)}
+        </div>
+        ${await fetchSubCategoriesRecursive(subCat.propertyName)} <!-- Alt kategorilerin alt kategorilerini recursive olarak getir -->
+      </div>
+    `;
+  }
+
+  return html;
 }
 // Alt kategori için ürün ekleme formunu göster
 window.showSubCategoryForm = function (subCategoryName) {
@@ -782,6 +787,7 @@ const initSortable = (subCategories) => {
         await updateItemOrder(itemIDs, currentSection);
       },
     });
+    
   }
 
   // Alt kategoriler için Sortable
@@ -804,7 +810,33 @@ const initSortable = (subCategories) => {
     });
   }
 };
+const initSortableRecursive = () => {
+  // Ana liste için Sortable
+  const mainItemList = document.getElementById("itemList");
+  if (mainItemList) {
+    Sortable.create(mainItemList, {
+      animation: 150, // Sürükleme animasyonunun süresi (milisaniye)
+      onEnd: async (evt) => {
+        // Sıralama bittiğinde çalışacak fonksiyon
+        const itemIDs = Array.from(mainItemList.children).map(item => item.dataset.id);
+        await updateItemOrder(itemIDs, currentSection);
+      }
+    });
+  }
 
+  // Tüm alt kategori listelerini bul ve Sortable'ı başlat
+  const allItemLists = document.querySelectorAll('[id^="itemList-"]');
+  allItemLists.forEach(list => {
+    const categoryName = list.id.replace('itemList-', '');
+    Sortable.create(list, {
+      animation: 150,
+      onEnd: async (evt) => {
+        const itemIDs = Array.from(list.children).map(item => item.dataset.id);
+        await updateItemOrder(itemIDs, categoryName);
+      }
+    });
+  });
+};
 const updateItemOrder = async (itemIDs, section) => {
   try {
     console.log("Sıralanan öğe ID'leri:", itemIDs, "Section:", section);

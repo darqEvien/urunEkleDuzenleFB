@@ -212,9 +212,3 @@ body {
   margin-bottom: 10px;
 }
 
-.sub-category-items {
-  margin-top: 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-}
