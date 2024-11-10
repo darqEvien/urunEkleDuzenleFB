@@ -98,13 +98,21 @@ const updateSidebarMenu = async () => {
   sidebar.innerHTML = sidebarHTML;
 };
 window.editSubCategoryItem = async function(itemId, subCategoryName) {
+  const originalSection = currentSection; // Mevcut section'ı kaydet
+  
   try {
     const docRef = doc(db, subCategoryName, itemId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const item = docSnap.data();
-      showForm(true); // Formu düzenleme modunda aç
+      
+      // Geçici olarak currentSection'ı alt kategori olarak ayarla
+      currentSection = subCategoryName;
+      currentItem = itemId;
+      
+      // Formu düzenleme modunda aç
+      await showForm(true);
 
       // Form elemanlarını doldur
       document.getElementById("name").value = item.name || "";
@@ -114,15 +122,18 @@ window.editSubCategoryItem = async function(itemId, subCategoryName) {
       document.getElementById("height").value = item.height || "";
       document.getElementById("description").value = item.description || "";
       document.getElementById("tag").value = Array.isArray(item.tag) ? item.tag.join(", ") : item.tag || "";
-
-      currentSection = subCategoryName; // Düzenlenecek alt kategori
-      currentItem = itemId; // Düzenlenecek öğenin ID'sini sakla
+      
+      if (item.imageUrl) {
+        document.getElementById("imageFile").setAttribute("data-existing-url", item.imageUrl);
+      }
     }
   } catch (error) {
     console.error("Ürün düzenleme hatası:", error);
   }
-}
 
+  // Form submit işleminden sonra kullanılmak üzere original section'ı sakla
+  document.getElementById("formContainer").setAttribute("data-original-section", originalSection);
+}
 window.closeForm = function() {
   const formOverlay = document.getElementById("formOverlay");
   formOverlay.style.display = "none";
@@ -294,52 +305,49 @@ async function fetchCategoriesForDropdown() {
   }
 }
 
-window.submitItem = async function() {
-  const name = document.getElementById("name").value;
-  const price = document.getElementById("price").value;
-  const size = document.getElementById("size").value;
-  const width = document.getElementById("width").value;
-  const height = document.getElementById("height").value;
-  const description = document.getElementById("description").value;
-  const tag = document.getElementById("tag").value.split(",").map(t => t.trim());
-  const parentCategory = currentSection; // Mevcut alt kategori
-  const imageFile = document.getElementById("imageFile").files[0];
+window.submitCategory = async function () {
+  const categoryTitle = document.getElementById("categoryTitle").value;
+  const propertyName = document.getElementById("propertyName").value;
+  const parentCategory = document.getElementById("parentCategory").value;
+  const selectValue = document.querySelector(`input[name="select"]:checked`)?.value;
+  const priceFormat = document.querySelector(`input[name="priceFormat"]:checked`)?.value;
+  const tags = document.getElementById("categoryTags").value.split(",").map((tag) => tag.trim());
 
-  if (!name || !price || !size || !description) {
-    alert("Lütfen gerekli alanları doldurun!");
+  if (!categoryTitle || !propertyName || !selectValue || !priceFormat) {
+    alert("Tüm alanları doldurun!");
     return;
   }
 
   try {
-    let itemID = currentItem || await generateID();
-    let imageUrl = "";
+    let categoryId;
 
-    if (imageFile) {
-      const storageRef = ref(storage, `images/${itemID}`);
-      await uploadBytes(storageRef, imageFile);
-      imageUrl = await getDownloadURL(storageRef);
+    if (currentItem) {
+      categoryId = currentItem; // Düzenleme yapılıyorsa mevcut ID kullanılır
+    } else {
+      categoryId = await updateID(); // Yeni kategori ekleniyorsa yeni ID oluşturulur
     }
+    const collectionRef = collection(db, "categories");
+    const querySnapshot = await getDocs(collectionRef);
+    const orderValue = querySnapshot.size + 1; // Sıralama değeri
 
-    await setDoc(doc(db, parentCategory, itemID), {
-      name,
-      price,
-      size,
-      width: width || null,
-      height: height || null,
-      description,
-      tag,
-      imageUrl,
-      order: 0, // Sıralama değeri ayarlayın
-      parentCategory: parentCategory // parentCategory'yi ekleyin
+    await setDoc(doc(db, "categories", categoryId), {
+      title: categoryTitle,
+      propertyName: propertyName,
+      parentCategory: parentCategory,
+      select: selectValue,
+      priceFormat: priceFormat,
+      order: orderValue,
+      tags: tags,
     }, { merge: true });
 
     closeForm();
-    await fetchSubCategoryItems(parentCategory); // Öğeleri yeniden yükle
-
+    fetchItems("categories"); // Kategorileri güncelle
+    updateSidebarMenu();
+    currentItem = null; // İşlem tamamlandıktan sonra currentItem'ı sıfırla
   } catch (error) {
-    console.error("Ürün kaydedilirken hata:", error);
+    console.error ("Error submitting category:", error);
   }
-}
+};
 const fetchItems = async (section) => {
   let itemListHTML = "";
   let mainContent = document.getElementById("mainContent");
@@ -752,7 +760,6 @@ window.submitItem = async function() {
 
     closeForm();
     
-    await fetchSubCategoryItems(currentSection);
     // Ana kategoriyi ve alt kategoriyi yenile
     if (originalSection && originalSection !== currentSection) {
       await fetchItems(originalSection);

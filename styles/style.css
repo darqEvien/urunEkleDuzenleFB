@@ -34,6 +34,7 @@ body {
     max-width: 13.5rem;
   } 
   .main-content {
+    
     flex-grow: 1;
     padding: 20px;
     background-color: #222222;
@@ -203,12 +204,10 @@ body {
 }
 .sub-category-section {
   margin: 20px 0;
-  padding: 20px;
- 
   border-radius: 8px;
 }
 
-.sub-category-section h3 {
+.sub-category-section h3, .sub-category-section #addItemBtn {
   margin-bottom: 10px;
 }
 
