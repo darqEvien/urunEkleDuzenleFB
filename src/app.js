@@ -320,15 +320,24 @@ window.submitCategory = async function () {
 
   try {
     let categoryId;
+    let orderValue;
 
-    if (currentItem) {
-      categoryId = currentItem; // Düzenleme yapılıyorsa mevcut ID kullanılır
+    // Yeni kategori ekleniyorsa yeni ID oluştur
+    if (!currentItem) {
+      categoryId = await updateID(); // Yeni kategori için ID oluştur
+      if (!categoryId) {
+        alert("Yeni kategori ID'si oluşturulurken bir hata oluştu.");
+        return; // Hata durumunda işlemi durdur
+      }
+      const collectionRef = collection(db, "categories");
+      const querySnapshot = await getDocs(collectionRef);
+      orderValue = querySnapshot.size + 1; // Yeni kategori için order değeri
     } else {
-      categoryId = await updateID(); // Yeni kategori ekleniyorsa yeni ID oluşturulur
+      categoryId = currentItem; // Düzenleme yapılıyorsa mevcut ID kullanılır
+      const categoryDocRef = doc(db, "categories", categoryId);
+      const categoryDocSnap = await getDoc(categoryDocRef);
+      orderValue = categoryDocSnap.exists() ? categoryDocSnap.data().order : 0; // Mevcut kategorinin order değerini al
     }
-    const collectionRef = collection(db, "categories");
-    const querySnapshot = await getDocs(collectionRef);
-    const orderValue = querySnapshot.size + 1; // Sıralama değeri
 
     await setDoc(doc(db, "categories", categoryId), {
       title: categoryTitle,
@@ -345,14 +354,16 @@ window.submitCategory = async function () {
     updateSidebarMenu();
     currentItem = null; // İşlem tamamlandıktan sonra currentItem'ı sıfırla
   } catch (error) {
-    console.error ("Error submitting category:", error);
+    console.error("Error submitting category:", error);
   }
 };
+
 const fetchItems = async (section) => {
   let itemListHTML = "";
   let mainContent = document.getElementById("mainContent");
   let subCatDiv = document.getElementById("subCatDiv");
   subCatDiv.innerHTML = "";
+
   if (section === "home") {
     const sidebarItems = Object.keys(sectionConfig).map((key) => ({
       name: sectionConfig[key].title,
@@ -387,10 +398,10 @@ const fetchItems = async (section) => {
           }</p>
            <p>Etiketler: ${tags}</p>
            <div class="ort">
-          <button onclick="editCategory('${doc.id}')">Edit</button>
+          <button onclick="editCategory('${doc.id}')">Düzenle</button>
           <button onclick="confirmDeleteCategory('${
             doc.id
-          }')" class="delete-btn">Delete</button>
+          }')" class="delete-btn">Sil</button>
           </div>
         </div>
       `;
@@ -404,7 +415,7 @@ const fetchItems = async (section) => {
         const item = doc.data();
         return `
           <div class="item-box" data-id="${doc.id}">
-          <h3>${item.name || "Unnamed Item"}</h3>
+          <h3>${item.name || "İsim Belirtilmemiş"}</h3>
           <div class="image-container">
             <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
           </div>
@@ -419,10 +430,10 @@ const fetchItems = async (section) => {
           <p>Tag: ${
             Array.isArray(item.tag) ? item.tag.join(", ") : item.tag
           }</p>
-          <button onclick="editItem('${doc.id}')">Edit</button>
+          <button onclick="editItem('${doc.id}')">Düzenle</button>
           <button onclick="confirmDelete('${
             doc.id
-          }')" class="delete-btn">Delete</button>
+          }')" class="delete-btn">Sil</button>
         </div>
       `;
       })
@@ -702,14 +713,16 @@ function clearFormFields() {
   }
 }
 
-// Dinamik ID oluşturma
+
+// Dinamik ID oluşturma fonksiyonu
 window.updateID = async function () {
   try {
-    const collectionRef = collection(db, currentSection);
+    const collectionRef = collection(db, "categories");
     const querySnapshot = await getDocs(collectionRef);
-    return `${currentSection}-${querySnapshot.size + 1}`;
+    return `category-${querySnapshot.size + 1}`; // Yeni ID formatı
   } catch (error) {
     console.error("Error fetching items for ID update:", error);
+    return null; // Hata durumunda null döndür
   }
 };
 

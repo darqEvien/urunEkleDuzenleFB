@@ -53,7 +53,7 @@ body {
     margin-bottom: 10px;
     background-color: #333333;
     max-width: 16rem;
-    height: 18rem;
+    min-height: 10rem;
   }
   .ort{
     
