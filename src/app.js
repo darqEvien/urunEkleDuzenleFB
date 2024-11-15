@@ -152,72 +152,7 @@ window.closeForm = function() {
 }
 
 // Kategori düzenleme fonksiyonu
-window.editCategory = async function (categoryId) {
-  currentItem = categoryId;
-  try {
-    // Öncelikle Firestore'daki kategoriyi alıyoruz
-    const docRef = doc(db, "categories", categoryId);
-    const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      const category = docSnap.data();
-      currentItem = categoryId;
-      await showCategoryForm(true);
-      await new Promise((resolve) => {
-        const checkElements = () => {
-          const titleInput = document.getElementById("categoryTitle");
-          const propertyInput = document.getElementById("propertyName");
-          const singleSelect = document.getElementById("singleSelect");
-          const multiSelect = document.getElementById("multiSelect");
-          const parentSelect = document.getElementById("parentCategory");
-          const priceFormatInputs = document.querySelectorAll(
-            'input[name="priceFormat"]'
-          );
-
-          if (
-            titleInput &&
-            propertyInput &&
-            singleSelect &&
-            multiSelect &&
-            parentSelect &&
-            priceFormatInputs.length
-          ) {
-            resolve();
-          } else {
-            setTimeout(checkElements, 100);
-          }
-        };
-        checkElements();
-      });
-
-      // Form elemanları hazır olduğunda verileri yerleştir
-      document.getElementById("categoryTitle").value = category.title || "";
-      document.getElementById("propertyName").value =
-        category.propertyName || "";
-      document.getElementById("categoryTags").value = category.tags
-        ? category.tags.join(", ")
-        : "";
-      if (category.select === "singleSelect") {
-        document.getElementById("singleSelect").checked = true;
-      } else if (category.select === "multiSelect") {
-        document.getElementById("multiSelect").checked = true;
-      }
-      if (category.priceFormat) {
-        document.querySelector(
-          `input[value="${category.priceFormat}"]`
-        ).checked = true;
-      }
-
-      // Ana kategori seçimi
-      const parentCategorySelect = document.getElementById("parentCategory");
-      parentCategorySelect.value = category.parentCategory || "";
-    } else {
-      console.error("Kategori bulunamadı!");
-    }
-  } catch (error) {
-    console.error("Kategori düzenleme hatası:", error);
-  }
-};
 
 // Kategori silme onayı
 window.confirmDeleteCategory = function (categoryId) {
@@ -238,7 +173,7 @@ async function deleteCategory(categoryId) {
 }
 // Show category form
 window.showCategoryForm = async function (edit = false) {
-  currentItem = null; // Yeni kategori eklerken currentItem'ı null yap
+
   const formOverlay = document.getElementById("formOverlay");
   const formContainer = document.getElementById("formContainer");
 
@@ -280,8 +215,6 @@ window.showCategoryForm = async function (edit = false) {
         <label for="cevre">Çevre</label><br>
         <input type="radio" id="artis" value="artis" name="priceFormat">
         <label for="artis">Artış</label><br>
-        <input type="radio" id="tavanDuvar" value="tavanDuvar" name="priceFormat">
-        <label for="artis">Tavan Duvar</label><br>
       </div>
     </div>
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
@@ -306,6 +239,32 @@ async function fetchCategoriesForDropdown() {
     return [];
   }
 }
+window.editCategory = async function (categoryId) {
+  currentItem = categoryId; // Mevcut kategori ID'sini atayın
+  console.log("Editing category with ID:", currentItem); // Kontrol için log ekleyin
+
+  try {
+    const docRef = doc(db, "categories", categoryId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const category = docSnap.data();
+      await showCategoryForm(true); // Formu düzenleme modunda açın
+
+      // Form elemanlarını kategori bilgileriyle doldurun
+      document.getElementById("categoryTitle").value = category.title || "";
+      document.getElementById("propertyName").value = category.propertyName || "";
+      document.getElementById("categoryTags").value = category.tags ? category.tags.join(", ") : "";
+      document.getElementById("parentCategory").value = category.parentCategory || "";
+      document.querySelector(`input[name="select"][value="${category.select}"]`).checked = true;
+      document.querySelector(`input[name="priceFormat"][value="${category.priceFormat}"]`).checked = true;
+    } else {
+      console.error("Kategori bulunamadı!");
+    }
+  } catch (error) {
+    console.error("Kategori düzenleme hatası:", error);
+  }
+};
 
 window.submitCategory = async function () {
   const categoryTitle = document.getElementById("categoryTitle").value;
@@ -316,31 +275,34 @@ window.submitCategory = async function () {
   const tags = document.getElementById("categoryTags").value.split(",").map((tag) => tag.trim());
 
   if (!categoryTitle || !propertyName || !selectValue || !priceFormat) {
-    alert("Tüm alanları doldurun!");
+    alert("Lütfen tüm zorunlu alanları doldurun!");
     return;
   }
 
   try {
-    let categoryId;
+    let categoryId = currentItem;
     let orderValue;
 
-    // Yeni kategori ekleniyorsa yeni ID oluştur
-    if (!currentItem) {
-      categoryId = await updateID(); // Yeni kategori için ID oluştur
+    if (currentItem) {
+      // Mevcut kategoriyi güncelleme işlemi
+      console.log("Düzenleme modunda, kategori ID:", currentItem);
+      const categoryDocRef = doc(db, "categories", categoryId);
+      const categoryDocSnap = await getDoc(categoryDocRef);
+      orderValue = categoryDocSnap.exists() ? categoryDocSnap.data().order : 0;
+    } else {
+      // Yeni kategori ekleme işlemi
+      console.log("Yeni kategori ekleniyor...");
+      categoryId = await updateID();
       if (!categoryId) {
         alert("Yeni kategori ID'si oluşturulurken bir hata oluştu.");
-        return; // Hata durumunda işlemi durdur
+        return;
       }
       const collectionRef = collection(db, "categories");
       const querySnapshot = await getDocs(collectionRef);
-      orderValue = querySnapshot.size + 1; // Yeni kategori için order değeri
-    } else {
-      categoryId = currentItem; // Düzenleme yapılıyorsa mevcut ID kullanılır
-      const categoryDocRef = doc(db, "categories", categoryId);
-      const categoryDocSnap = await getDoc(categoryDocRef);
-      orderValue = categoryDocSnap.exists() ? categoryDocSnap.data().order : 0; // Mevcut kategorinin order değerini al
+      orderValue = querySnapshot.size + 1;
     }
 
+    // Kategoriyi kaydet veya güncelle
     await setDoc(doc(db, "categories", categoryId), {
       title: categoryTitle,
       propertyName: propertyName,
@@ -352,13 +314,16 @@ window.submitCategory = async function () {
     }, { merge: true });
 
     closeForm();
-    fetchItems("categories"); // Kategorileri güncelle
+    fetchItems("categories");
     updateSidebarMenu();
-    currentItem = null; // İşlem tamamlandıktan sonra currentItem'ı sıfırla
+    currentItem = null; // İşlem sonrasında `currentItem` sıfırlanır
   } catch (error) {
-    console.error("Error submitting category:", error);
+    console.error("Kategori kaydedilirken hata:", error);
   }
 };
+
+
+
 
 const fetchItems = async (section) => {
   let itemListHTML = "";
