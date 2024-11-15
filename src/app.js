@@ -215,6 +215,8 @@ window.showCategoryForm = async function (edit = false) {
         <label for="cevre">Çevre</label><br>
         <input type="radio" id="artis" value="artis" name="priceFormat">
         <label for="artis">Artış</label><br>
+        <input type="radio" id="tasDuvar" value="tasDuvar" name="priceFormat">
+        <label for="artis">Taş Duvar</label><br>
       </div>
     </div>
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
@@ -567,7 +569,7 @@ window.showForm = async function(edit = false) {
           const item = docSnap.data();
           document.getElementById("name").value = item.name || "";
           document.getElementById("price").value = item.price || "";
-          document.getElementById("alanPrice").value = item.price2 || "";
+          document.getElementById("alanPrice").value = item.alanPrice || "";
           document.getElementById("size").value = item.size || "";
           document.getElementById("width").value = item.width || "";
           document.getElementById("height").value = item.height || "";
@@ -713,13 +715,19 @@ window.submitItem = async function() {
   const imageFile = document.getElementById("imageFile").files[0];
   const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
 
-  if (!name || !price || !size ) {
+  if (!name || !price || !size) {
     alert("Lütfen gerekli alanları doldurun!");
     return;
   }
 
   try {
-    let itemID = currentItem || await updateID();
+    // Kategoriye ait mevcut döküman sayısını al
+    const collectionRef = collection(db, currentSection);
+    const querySnapshot = await getDocs(collectionRef);
+    const documentCount = querySnapshot.size;
+
+    // Yeni döküman ID'sini oluştur
+    const itemID = `${currentSection}-${documentCount + 1}`; // ID formatı: kategoriAdı-sayı
     let imageUrl = "";
 
     if (imageFile) {
@@ -730,9 +738,7 @@ window.submitItem = async function() {
       imageUrl = document.getElementById("imageFile").getAttribute("data-existing-url");
     }
 
-    const collectionRef = collection(db, currentSection);
-    const querySnapshot = await getDocs(collectionRef);
-    const orderValue = currentItem ? (await getDoc(doc(db, currentSection, currentItem))).data()?.order : querySnapshot.size + 1;
+    const orderValue = currentItem ? (await getDoc(doc(db, currentSection, currentItem))).data()?.order : documentCount + 1;
 
     await setDoc(doc(db, currentSection, itemID), {
       name,
@@ -748,7 +754,7 @@ window.submitItem = async function() {
     }, { merge: true });
 
     closeForm();
-    
+
     // Ana kategoriyi ve alt kategoriyi yenile
     if (originalSection && originalSection !== currentSection) {
       await fetchItems(originalSection);
@@ -763,10 +769,6 @@ window.submitItem = async function() {
     console.error("Ürün kaydedilirken hata:", error);
   }
 }
-
-// Formu kapatma fonksiyonu
-
-
 // Ürün düzenleme fonksiyonu
 const initSortable = (subCategories) => {
   // Ana kategori için Sortable
