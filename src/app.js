@@ -18,7 +18,7 @@ import {
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 import Sortable from "sortablejs";
-
+import _ from "lodash";
 // Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyA8UsQZNNkhW-76nND5uysnTp65E-OEcik",
@@ -280,6 +280,8 @@ window.showCategoryForm = async function (edit = false) {
         <label for="cevre">Çevre</label><br>
         <input type="radio" id="artis" value="artis" name="priceFormat">
         <label for="artis">Artış</label><br>
+        <input type="radio" id="tavanDuvar" value="tavanDuvar" name="priceFormat">
+        <label for="artis">Tavan Duvar</label><br>
       </div>
     </div>
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
@@ -576,7 +578,8 @@ window.showForm = async function(edit = false) {
   formContainer.innerHTML = `
     <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Ürün</h2>
     <input type="text" id="name" placeholder="Ürün Adı" required>
-    <input type="number" id="price" required placeholder="Fiyat">
+    <input type="number" id="price" required placeholder="Fiyat - cevre">
+    <input type="number" id="alanPrice" placeholder="Fiyat - alan">
     <input type="text" id="size" required placeholder="Boyut">
     <div style="display: flex; gap: 10px;">
       <input type="text" id="width" placeholder="En (cm)" min="0" step="0.1">
@@ -599,6 +602,7 @@ window.showForm = async function(edit = false) {
           const item = docSnap.data();
           document.getElementById("name").value = item.name || "";
           document.getElementById("price").value = item.price || "";
+          document.getElementById("alanPrice").value = item.price2 || "";
           document.getElementById("size").value = item.size || "";
           document.getElementById("width").value = item.width || "";
           document.getElementById("height").value = item.height || "";
@@ -646,6 +650,7 @@ window.editItem = async function (itemId) {
       // Form elemanlarını DOM'dan aldığımıza emin olalım
       const nameField = document.getElementById("name");
       const priceField = document.getElementById("price");
+      const alanPriceField = document.getElementById("alanPrice");
       const sizeField = document.getElementById("size");
       const widthField = document.getElementById("width")
       const heightField =document.getElementById("height")
@@ -656,6 +661,7 @@ window.editItem = async function (itemId) {
       if (
         !nameField ||
         !priceField ||
+        !alanPriceField ||
         !sizeField ||
         !widthField ||
         !heightField ||
@@ -670,6 +676,7 @@ window.editItem = async function (itemId) {
       // Formu düzenleme modunda doldur
       nameField.value = item.name || "";
       priceField.value = item.price || "";
+      alanPriceField.value = item.alanPrice || "";
       sizeField.value = item.size || "";
       widthField.value = item.width || "";
       heightField.value = item.height || "";
@@ -693,6 +700,7 @@ window.editItem = async function (itemId) {
 function clearFormFields() {
   const nameField = document.getElementById("name");
   const priceField = document.getElementById("price");
+  const alanPriceField = document.getElementById("alanPrice");
   const sizeField = document.getElementById("size");
   const widthField = document.getElementById("width");
   const heightField = document.getElementById("height");
@@ -702,6 +710,7 @@ function clearFormFields() {
 
   if (nameField) nameField.value = "";
   if (priceField) priceField.value = "";
+  if (alanPriceField) priceField.value = "";
   if (sizeField) sizeField.value = "";
   if (widthField) widthField.value = "";
   if (heightField) heightField.value = "";
@@ -730,6 +739,7 @@ window.updateID = async function () {
 window.submitItem = async function() {
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
+  const alanPrice = document.getElementById("alanPrice").value;
   const size = document.getElementById("size").value;
   const width = document.getElementById("width").value;
   const height = document.getElementById("height").value;
@@ -738,7 +748,7 @@ window.submitItem = async function() {
   const imageFile = document.getElementById("imageFile").files[0];
   const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
 
-  if (!name || !price || !size || !description) {
+  if (!name || !price || !size ) {
     alert("Lütfen gerekli alanları doldurun!");
     return;
   }
@@ -762,6 +772,7 @@ window.submitItem = async function() {
     await setDoc(doc(db, currentSection, itemID), {
       name,
       price,
+      alanPrice,
       size,
       width: width || null,
       height: height || null,
