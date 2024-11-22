@@ -97,20 +97,20 @@ const updateSidebarMenu = async () => {
 
   sidebar.innerHTML = sidebarHTML;
 };
-window.editSubCategoryItem = async function(itemId, subCategoryName) {
+window.editSubCategoryItem = async function (itemId, subCategoryName) {
   const originalSection = currentSection; // Mevcut section'ı kaydet
-  
+
   try {
     const docRef = doc(db, subCategoryName, itemId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const item = docSnap.data();
-      
+
       // Geçici olarak currentSection'ı alt kategori olarak ayarla
       currentSection = subCategoryName;
       currentItem = itemId;
-      
+
       // Formu düzenleme modunda aç
       await showForm(true);
 
@@ -121,10 +121,14 @@ window.editSubCategoryItem = async function(itemId, subCategoryName) {
       document.getElementById("width").value = item.width || "";
       document.getElementById("height").value = item.height || "";
       document.getElementById("description").value = item.description || "";
-      document.getElementById("tag").value = Array.isArray(item.tag) ? item.tag.join(", ") : item.tag || "";
-      
+      document.getElementById("tag").value = Array.isArray(item.tag)
+        ? item.tag.join(", ")
+        : item.tag || "";
+
       if (item.imageUrl) {
-        document.getElementById("imageFile").setAttribute("data-existing-url", item.imageUrl);
+        document
+          .getElementById("imageFile")
+          .setAttribute("data-existing-url", item.imageUrl);
       }
     }
   } catch (error) {
@@ -132,27 +136,32 @@ window.editSubCategoryItem = async function(itemId, subCategoryName) {
   }
 
   // Form submit işleminden sonra kullanılmak üzere original section'ı sakla
-  document.getElementById("formContainer").setAttribute("data-original-section", originalSection);
-}
-window.closeForm = function() {
+  document
+    .getElementById("formContainer")
+    .setAttribute("data-original-section", originalSection);
+};
+window.closeForm = function () {
   const formOverlay = document.getElementById("formOverlay");
   formOverlay.style.display = "none";
-  
+
   // Original section'ı geri yükle
-  const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
+  const originalSection = document
+    .getElementById("formContainer")
+    .getAttribute("data-original-section");
   if (originalSection) {
     currentSection = originalSection;
-    document.getElementById("formContainer").removeAttribute("data-original-section");
+    document
+      .getElementById("formContainer")
+      .removeAttribute("data-original-section");
   }
-  
+
   currentItem = null;
-  
+
   // Form alanlarını temizle
   clearFormFields(); // Burada form alanlarını temizle
-}
+};
 
 // Kategori düzenleme fonksiyonu
-
 
 // Kategori silme onayı
 window.confirmDeleteCategory = function (categoryId) {
@@ -173,7 +182,6 @@ async function deleteCategory(categoryId) {
 }
 // Show category form
 window.showCategoryForm = async function (edit = false) {
-
   const formOverlay = document.getElementById("formOverlay");
   const formContainer = document.getElementById("formContainer");
 
@@ -222,6 +230,7 @@ window.showCategoryForm = async function (edit = false) {
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
     <br >
     <div style="display:flex; justify-content:center;">
+    
       <button onclick="submitCategory()">Kaydet</button>
       <button onclick="closeForm()">İptal</button>
     </div>
@@ -255,11 +264,19 @@ window.editCategory = async function (categoryId) {
 
       // Form elemanlarını kategori bilgileriyle doldurun
       document.getElementById("categoryTitle").value = category.title || "";
-      document.getElementById("propertyName").value = category.propertyName || "";
-      document.getElementById("categoryTags").value = category.tags ? category.tags.join(", ") : "";
-      document.getElementById("parentCategory").value = category.parentCategory || "";
-      document.querySelector(`input[name="select"][value="${category.select}"]`).checked = true;
-      document.querySelector(`input[name="priceFormat"][value="${category.priceFormat}"]`).checked = true;
+      document.getElementById("propertyName").value =
+        category.propertyName || "";
+      document.getElementById("categoryTags").value = category.tags
+        ? category.tags.join(", ")
+        : "";
+      document.getElementById("parentCategory").value =
+        category.parentCategory || "";
+      document.querySelector(
+        `input[name="select"][value="${category.select}"]`
+      ).checked = true;
+      document.querySelector(
+        `input[name="priceFormat"][value="${category.priceFormat}"]`
+      ).checked = true;
     } else {
       console.error("Kategori bulunamadı!");
     }
@@ -272,9 +289,16 @@ window.submitCategory = async function () {
   const categoryTitle = document.getElementById("categoryTitle").value;
   const propertyName = document.getElementById("propertyName").value;
   const parentCategory = document.getElementById("parentCategory").value;
-  const selectValue = document.querySelector(`input[name="select"]:checked`)?.value;
-  const priceFormat = document.querySelector(`input[name="priceFormat"]:checked`)?.value;
-  const tags = document.getElementById("categoryTags").value.split(",").map((tag) => tag.trim());
+  const selectValue = document.querySelector(
+    `input[name="select"]:checked`
+  )?.value;
+  const priceFormat = document.querySelector(
+    `input[name="priceFormat"]:checked`
+  )?.value;
+  const tags = document
+    .getElementById("categoryTags")
+    .value.split(",")
+    .map((tag) => tag.trim());
 
   if (!categoryTitle || !propertyName || !selectValue || !priceFormat) {
     alert("Lütfen tüm zorunlu alanları doldurun!");
@@ -305,15 +329,19 @@ window.submitCategory = async function () {
     }
 
     // Kategoriyi kaydet veya güncelle
-    await setDoc(doc(db, "categories", categoryId), {
-      title: categoryTitle,
-      propertyName: propertyName,
-      parentCategory: parentCategory,
-      select: selectValue,
-      priceFormat: priceFormat,
-      order: orderValue,
-      tags: tags,
-    }, { merge: true });
+    await setDoc(
+      doc(db, "categories", categoryId),
+      {
+        title: categoryTitle,
+        propertyName: propertyName,
+        parentCategory: parentCategory,
+        select: selectValue,
+        priceFormat: priceFormat,
+        order: orderValue,
+        tags: tags,
+      },
+      { merge: true }
+    );
 
     closeForm();
     fetchItems("categories");
@@ -323,9 +351,6 @@ window.submitCategory = async function () {
     console.error("Kategori kaydedilirken hata:", error);
   }
 };
-
-
-
 
 const fetchItems = async (section) => {
   let itemListHTML = "";
@@ -379,14 +404,16 @@ const fetchItems = async (section) => {
   } else {
     const qe = query(collection(db, section), orderBy("order"));
     const querySnapshot = await getDocs(qe);
+    
     itemListHTML = querySnapshot.docs
       .map((doc) => {
         const item = doc.data();
+        const firstImage = (item.images && item.images.length > 0) ? item.images[0] : 'default-image-url.jpg'; // Varsayılan görsel URL'si
         return `
           <div class="item-box" data-id="${doc.id}">
           <h3>${item.name || "İsim Belirtilmemiş"}</h3>
           <div class="image-container">
-            <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
+            <img src="${firstImage}" alt="${item.name}" class="item-image"/>
           </div>
           <p>Fiyat: ${item.price}</p>
           <p>Boyut: ${item.size}</p>
@@ -412,7 +439,7 @@ const fetchItems = async (section) => {
     const subCatDivs = document.createElement("div");
     subCatDiv.appendChild(subCatDivs);
     subCatDivs.setAttribute("id", "subCatDiv");
-    
+
     // Recursive olarak tüm alt kategorileri getir
     subCatDivs.innerHTML = await fetchSubCategoriesRecursive(section);
 
@@ -435,7 +462,9 @@ async function fetchSubCategoryItems(subCategoryName) {
           <div class="item-box" data-id="${doc.id}">
             <h3>${item.name || "Unnamed Item"}</h3>
             <div class="image-container">
-              <img src="${item.imageUrl}" alt="${item.name}" class="item-image"/>
+              <img src="${item.imageUrl}" alt="${
+          item.name
+        }" class="item-image"/>
             </div>
             <p>Fiyat: ${item.price}</p>
             <p>Boyut: ${item.size}</p>
@@ -445,9 +474,15 @@ async function fetchSubCategoryItems(subCategoryName) {
                 : ""
             }
             <p>Açıklama: ${item.description}</p>
-            <p>Tag: ${Array.isArray(item.tag) ? item.tag.join(", ") : item.tag}</p>
-            <button onclick="editSubCategoryItem('${doc.id}', '${subCategoryName}')">Edit</button>
-            <button onclick="confirmDeleteSubCategoryItem('${doc.id}', '${subCategoryName}')" class="delete-btn">Delete</button>
+            <p>Tag: ${
+              Array.isArray(item.tag) ? item.tag.join(", ") : item.tag
+            }</p>
+            <button onclick="editSubCategoryItem('${
+              doc.id
+            }', '${subCategoryName}')">Edit</button>
+            <button onclick="confirmDeleteSubCategoryItem('${
+              doc.id
+            }', '${subCategoryName}')" class="delete-btn">Delete</button>
           </div>
         `;
       })
@@ -459,20 +494,28 @@ async function fetchSubCategoryItems(subCategoryName) {
 }
 async function fetchSubCategoriesRecursive(parentCategory) {
   const categories = await fetchCategoriesForDropdown();
-  const subCategories = categories.filter(cat => cat.parentCategory === parentCategory);
-  let html = '';
+  const subCategories = categories.filter(
+    (cat) => cat.parentCategory === parentCategory
+  );
+  let html = "";
 
   for (const subCat of subCategories) {
     html += `
       <div class="sub-category-section">
-        <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${subCat.propertyName}')">
+        <button id="addItemBtn" class="add-item-btn" onclick="showSubCategoryForm('${
+          subCat.propertyName
+        }')">
           ${subCat.title}'ye Ürün Ekle
         </button>
         <h2 class="section-header">${subCat.title}</h2>
-        <div id="itemList-${subCat.propertyName}" class="sortable-list itemList">
+        <div id="itemList-${
+          subCat.propertyName
+        }" class="sortable-list itemList">
           ${await fetchSubCategoryItems(subCat.propertyName)}
         </div>
-        ${await fetchSubCategoriesRecursive(subCat.propertyName)} <!-- Alt kategorilerin alt kategorilerini recursive olarak getir -->
+        ${await fetchSubCategoriesRecursive(
+          subCat.propertyName
+        )} <!-- Alt kategorilerin alt kategorilerini recursive olarak getir -->
       </div>
     `;
   }
@@ -488,13 +531,13 @@ window.showSubCategoryForm = function (subCategoryName) {
 // Alt kategori ürününü düzenleme
 
 // Alt kategori ürününü silme
-window.confirmDeleteSubCategoryItem = function(itemId, subCategoryName) {
+window.confirmDeleteSubCategoryItem = function (itemId, subCategoryName) {
   if (confirm("Bu ürünü silmek istediğinize emin misiniz?")) {
     deleteSubCategoryItem(itemId, subCategoryName);
   }
-}
+};
 
-window.deleteSubCategoryItem = async function(itemId, subCategoryName) {
+window.deleteSubCategoryItem = async function (itemId, subCategoryName) {
   try {
     await deleteDoc(doc(db, subCategoryName, itemId));
     // Ana kategoriyi ve alt kategoriyi yenile
@@ -502,7 +545,7 @@ window.deleteSubCategoryItem = async function(itemId, subCategoryName) {
   } catch (error) {
     console.error("Alt kategori ürünü silinirken hata:", error);
   }
-}
+};
 // Kategorileri yükledikten sonra content'i göster
 window.showContent = async function (section) {
   currentSection = section;
@@ -537,7 +580,7 @@ const updateHeaderAndButtons = (section) => {
     sectionConfig[section]?.title || "Section";
 };
 // Show form for adding/editing items
-window.showForm = async function(edit = false) {
+window.showForm = async function (edit = false) {
   updateID(); // ID'yi güncelle
   const formOverlay = document.getElementById("formOverlay");
   const formContainer = document.getElementById("formContainer");
@@ -554,7 +597,8 @@ window.showForm = async function(edit = false) {
     </div>
     <input type="text" id="description" placeholder="Açıklama">
     <input type="text" id="tag" required placeholder="Etiketleri virgül ile ayırınız.">
-    <input type="file" id="imageFile" accept="image/*">
+    <input type="file" id="imageFile" accept="image/*" multiple>
+    <div id="imagePreviewContainer" style="display: flex; flex-wrap: wrap; margin-top: 10px;"></div>
     <button onclick="submitItem()">Kaydet</button>
     <button onclick="closeForm()">İptal</button>
   `;
@@ -574,19 +618,37 @@ window.showForm = async function(edit = false) {
           document.getElementById("width").value = item.width || "";
           document.getElementById("height").value = item.height || "";
           document.getElementById("description").value = item.description || "";
-          document.getElementById("tag").value = Array.isArray(item.tag) ? item.tag.join(", ") : item.tag || "";
-          document
-            .getElementById("imageFile")
-            .setAttribute("data-existing-url", item.imageUrl || "");
-        }
-      } catch (error) {
-        console.error("Ürün yüklenirken hata:", error);
+          document.getElementById("tag").value = Array.isArray(item.tag)
+            ? item.tag.join(", ")
+            : item.tag || "";
+            
+            const previewContainer = document.getElementById("imagePreviewContainer");
+            previewContainer.innerHTML = ""; // Önceki görselleri temizle
+            if (item.images && item.images.length > 0) {
+                item.images.forEach(imageUrl => {
+                    const img = document.createElement("img");
+                    img.src = imageUrl;
+                    img.style.width = "120px"; // Görsel boyutunu ayarlayın
+                    img.style.height = "75px"; // Görsel boyutunu ayarlayın
+                    img.style.minHeight = "75px"; // Görsel boyutunu ayarlayın
+                    img.style.maxHeight = "75px"; // Görsel boyutunu ayarlayın
+                    img.style.objectFit = "cover";
+                    img.style.margin = "5px";
+                    previewContainer.appendChild(img);
+                });
+            } else {
+                console.log("Bu ürünün görseli yok.");}
+        }else {
+          console.error("Ürün bulunamadı!");
       }
-    }, 200);
-  } else {
-    clearFormFields(); // Formu temizle
-  }
+    } catch (error) {
+        console.error("Ürün yüklenirken hata:", error);
+    }
+}, 200);
+} else {
+clearFormFields(); // Formu temizle
 }
+};
 // Ürün silme
 const deleteItem = async (itemID) => {
   try {
@@ -619,12 +681,12 @@ window.editItem = async function (itemId) {
       const priceField = document.getElementById("price");
       const alanPriceField = document.getElementById("alanPrice");
       const sizeField = document.getElementById("size");
-      const widthField = document.getElementById("width")
-      const heightField =document.getElementById("height")
+      const widthField = document.getElementById("width");
+      const heightField = document.getElementById("height");
       const descField = document.getElementById("description");
       const tagField = document.getElementById("tag");
       const imageFileField = document.getElementById("imageFile");
-
+      const previewContainer = document.getElementById("imagePreviewContainer");
       if (
         !nameField ||
         !priceField ||
@@ -634,7 +696,8 @@ window.editItem = async function (itemId) {
         !heightField ||
         !descField ||
         !tagField ||
-        !imageFileField
+        !imageFileField ||
+        !previewContainer
       ) {
         console.error("Form elementleri bulunamadı!");
         return;
@@ -652,16 +715,77 @@ window.editItem = async function (itemId) {
 
       // Eğer resim varsa mevcut resim URL'sini tut
       imageFileField.setAttribute("data-existing-url", item.imageUrl || "");
+        
+      previewContainer.innerHTML = ""; // Önizleme alanını temizle
 
-      currentItem = itemId; // Düzenlenecek öğenin ID'sini sakla
-    } else {
-      console.error("Ürün bulunamadı!");
-    }
+      if (item.images && item.images.length > 0) {
+          item.images.forEach(imageUrl => {
+              const imgWrapper = document.createElement("div");
+              imgWrapper.style.position = "relative"; // Konumlandırma için
+              imgWrapper.classList.add("image-wrapper"); // Sıralama için sınıf ekle
+
+              const img = document.createElement("img");
+              
+              img.src = imageUrl; // Mevcut görselin URL'si
+              img.style.width = "120px"; // Görsel boyutunu ayarlayın
+              img.style.Height = "75px";
+              img.style.minHeight = "75px"; // Görsel boyutunu ayarlayın
+              img.style.maxHeight = "75px"; // Görsel boyutunu ayarlayın
+              img.style.objectFit = "cover";
+              img.style.margin = "5px";
+              imgWrapper.appendChild(img);
+
+              // Çöp kutusu simgesi
+              const deleteBtn = document.createElement("button");
+              deleteBtn.innerHTML = "🗑️"; // Çöp kutusu simgesi
+              deleteBtn.classList.add("delete-btn-img"); // CSS sınıfını ekle
+              deleteBtn.style.position = "absolute";
+              deleteBtn.style.top = "0";
+              deleteBtn.style.right = "0";
+              deleteBtn.style.background = "transparent";
+              deleteBtn.style.border = "none";
+              deleteBtn.style.cursor = "pointer";
+
+
+              deleteBtn.onclick = () => {
+                  const confirmDelete = confirm("Bu görseli silmek istediğinize emin misiniz?");
+                  if (confirmDelete) {
+                      imgWrapper.remove(); // Görseli DOM'dan kaldır
+                  }
+              };
+
+              imgWrapper.appendChild(deleteBtn);
+              previewContainer.appendChild(imgWrapper);
+          });
+      }
+
+      // Sortable'ı başlat
+      Sortable.create(previewContainer, {
+        animation: 150, // Sürükleme animasyonunun süresi (milisaniye)
+        onEnd: async function (evt) {
+            // Sıralama bittiğinde çalışacak fonksiyon
+            const sortedImages = Array.from(previewContainer.children).map(imgWrapper => imgWrapper.querySelector('img').src);
+            console.log("Yeni sıralama:", sortedImages); // Yeni sıralamayı konsola yazdır
+    
+            // Firebase'de güncelleme yap
+            try {
+                const docRef = doc(db, currentSection, currentItem); // Mevcut ürünün referansı
+                await setDoc(docRef, { images: sortedImages }, { merge: true }); // Görsel dizisini güncelle
+                console.log("Görsel sırası Firebase'de güncellendi.");
+            } catch (error) {
+                console.error("Firebase'de güncelleme hatası:", error);
+            }
+        }
+    });
+
+            currentItem = itemId; // Düzenlenecek öğenin ID'sini sakla
+        } else {
+            console.error("Ürün bulunamadı!");
+        }
   } catch (error) {
     console.error("Ürün düzenleme hatası:", error);
   }
 };
-
 
 // Formu temizleme fonksiyonu
 function clearFormFields() {
@@ -689,7 +813,6 @@ function clearFormFields() {
   }
 }
 
-
 // Dinamik ID oluşturma fonksiyonu
 window.updateID = async function () {
   try {
@@ -703,7 +826,12 @@ window.updateID = async function () {
 };
 
 // Ürün gönderme fonksiyonu
-window.submitItem = async function() {
+window.submitItem = async function () {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  const loadingBar = document.querySelector(".loading-bar");
+  loadingOverlay.classList.remove("hidden"); // Yükleme çubuğunu göster
+  loadingBar.style.width = "0"; // Başlangıçta sıfır genişlikte
+
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const alanPrice = document.getElementById("alanPrice").value;
@@ -711,9 +839,89 @@ window.submitItem = async function() {
   const width = document.getElementById("width").value;
   const height = document.getElementById("height").value;
   const description = document.getElementById("description").value;
-  const tag = document.getElementById("tag").value.split(",").map(t => t.trim());
-  const imageFile = document.getElementById("imageFile").files[0];
-  const originalSection = document.getElementById("formContainer").getAttribute("data-original-section");
+  const tag = document
+    .getElementById("tag")
+    .value.split(",")
+    .map((t) => t.trim());
+  const imageFiles = document.getElementById("imageFile").files;
+  // imageInput öğesini al
+  const originalSection = document
+    .getElementById("formContainer")
+    .getAttribute("data-original-section");
+
+    const previewContainer = document.getElementById("imagePreviewContainer");
+    previewContainer.innerHTML = "";
+    let existingImages = Array.from(previewContainer.children).map(imgWrapper => imgWrapper.querySelector('img').src);
+   
+    if (currentItem) {
+      // Eğer düzenleme modundaysak mevcut görselleri al
+      const docSnap = await getDoc(doc(db, currentSection, currentItem));
+      if (docSnap.exists()) {
+        const itemData = docSnap.data();
+        existingImages = itemData.images || []; // Mevcut görselleri al
+      }
+  }
+  const newImages = [];
+for (const file of imageFiles) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    newImages.push(e.target.result);
+      const imgWrapper = document.createElement("div");
+      imgWrapper.style.position = "relative"; // Konumlandırma için
+      imgWrapper.classList.add("image-wrapper"); // Sıralama için sınıf ekle
+
+      const img = document.createElement("img");
+      img.src = e.target.result; // Yüklenen resmin verisi
+      img.style.width = "120px";
+      img.style.height = "75px"; // Görsel boyutunu ayarlayın
+      img.style.minHeight = "75px"; // Görsel boyutunu ayarlayın
+      img.style.maxHeight = "75px"; // Görsel boyutunu ayarlayın
+      img.style.objectFit = "cover";
+      img.style.margin = "5px";
+      imgWrapper.appendChild(img);
+
+      // Çöp kutusu simgesi
+      const deleteBtn = document.createElement("button");
+      deleteBtn.innerHTML = "🗑️"; // Çöp kutusu simgesi
+      deleteBtn.classList.add("delete-btn"); // CSS sınıfını ekle
+      deleteBtn.style.position = "absolute";
+      deleteBtn.style.top = "0";
+      deleteBtn.style.right = "0";
+      deleteBtn.style.background = "transparent";
+      deleteBtn.style.border = "none";
+      deleteBtn.style.cursor = "pointer";
+
+      deleteBtn.onclick = () => {
+          const confirmDelete = confirm("Bu görseli silmek istediğinize emin misiniz?");
+          if (confirmDelete) {
+              imgWrapper.remove(); // Görseli DOM'dan kaldır
+          }
+      };
+
+      imgWrapper.appendChild(deleteBtn);
+      previewContainer.appendChild(imgWrapper);
+  };
+  reader.readAsDataURL(file); // Dosyayı oku
+}
+
+// Sortable'ı başlat
+Sortable.create(previewContainer, {
+  animation: 150, // Sürükleme animasyonunun süresi (milisaniye)
+  onEnd: async function (evt) {
+      // Sıralama bittiğinde çalışacak fonksiyon
+      const sortedImages = Array.from(previewContainer.children).map(imgWrapper => imgWrapper.querySelector('img').src);
+      console.log("Yeni sıralama:", sortedImages); // Yeni sıralamayı konsola yazdır
+
+      // Firebase'de güncelleme yap
+      try {
+          const docRef = doc(db, currentSection, currentItem); // Mevcut ürünün referansı
+          await setDoc(docRef, { images: sortedImages }, { merge: true }); // Görsel dizisini güncelle
+          console.log("Görsel sırası Firebase'de güncellendi.");
+      } catch (error) {
+          console.error("Firebase'de güncelleme hatası:", error);
+      }
+  }
+});
 
   if (!name || !price || !size) {
     alert("Lütfen gerekli alanları doldurun!");
@@ -721,37 +929,52 @@ window.submitItem = async function() {
   }
 
   try {
-    // Kategoriye ait mevcut döküman sayısını al
-    const collectionRef = collection(db, currentSection);
-    const querySnapshot = await getDocs(collectionRef);
-    const documentCount = querySnapshot.size;
-
-    // Yeni döküman ID'sini oluştur
-    const itemID = `${currentSection}-${documentCount + 1}`; // ID formatı: kategoriAdı-sayı
-    let imageUrl = "";
-
-    if (imageFile) {
-      const storageRef = ref(storage, `images/${itemID}`);
-      await uploadBytes(storageRef, imageFile);
-      imageUrl = await getDownloadURL(storageRef);
-    } else if (document.getElementById("imageFile").hasAttribute("data-existing-url")) {
-      imageUrl = document.getElementById("imageFile").getAttribute("data-existing-url");
+    let itemID;
+    let orderValue;
+    
+    if (currentItem) {
+      // Düzenleme modu
+      itemID = currentItem;
+      const docSnap = await getDoc(doc(db, currentSection, currentItem));
+      orderValue = docSnap.exists() ? docSnap.data().order : 0;
+    } else {
+      // Yeni öğe ekleme modu
+      const collectionRef = collection(db, currentSection);
+      const querySnapshot = await getDocs(collectionRef);
+      const documentCount = querySnapshot.size;
+      
+      // Benzersiz ID oluştur
+      const timestamp = Date.now();
+      itemID = `${currentSection}-${documentCount + 1}-${timestamp}`;
+      orderValue = documentCount + 1;
+    }
+    const imageUrls = [];
+    for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const imageUrl = await uploadImage(file);
+        imageUrls.push(imageUrl);
+        loadingBar.style.width = `${((i + 1) / imageFiles.length) * 100}%`;
     }
 
-    const orderValue = currentItem ? (await getDoc(doc(db, currentSection, currentItem))).data()?.order : documentCount + 1;
+    // Mevcut görsellerle yeni gör selleri birleştir
+    const allImages = existingImages.concat(imageUrls);
 
-    await setDoc(doc(db, currentSection, itemID), {
-      name,
-      price,
-      alanPrice,
-      size,
-      width: width || null,
-      height: height || null,
-      description,
-      tag,
-      imageUrl,
-      order: orderValue
-    }, { merge: true });
+    await setDoc(
+      doc(db, currentSection, itemID),
+      {
+        name,
+        price,
+        alanPrice,
+        size,
+        width: width || null,
+        height: height || null,
+        description,
+        tag,
+        images: allImages,
+        order: orderValue,
+      },
+      { merge: true }
+    );
 
     closeForm();
 
@@ -764,9 +987,32 @@ window.submitItem = async function() {
 
     // Form verilerini temizle
     currentItem = null;
-    document.getElementById("formContainer").removeAttribute("data-original-section");
+    document
+      .getElementById("formContainer")
+      .removeAttribute("data-original-section");
   } catch (error) {
     console.error("Ürün kaydedilirken hata:", error);
+  } finally {
+    // Yükleme çubuğunu gizle
+    loadingOverlay.classList.add("hidden");
+    loadingBar.style.width = "0"; // Yükleme çubuğunu sıfırla
+}
+};
+async function uploadImage(file) {
+  try {
+    const timestamp = Date.now();
+    const fileName = `image_${timestamp}_${file.name}`;
+    const itemName = document.getElementById("name").value.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    
+    // Storage path: images/categoryName/itemName/images/fileName
+    const storageRef = ref(storage, `images/${currentSection}/${itemName}/${fileName}`);
+    
+    await uploadBytes(storageRef, file);
+    const imageUrl = await getDownloadURL(storageRef);
+    return imageUrl;
+  } catch (error) {
+    console.error("Resim yüklenirken hata:", error);
+    throw error;
   }
 }
 // Ürün düzenleme fonksiyonu
@@ -783,7 +1029,6 @@ const initSortable = (subCategories) => {
         await updateItemOrder(itemIDs, currentSection);
       },
     });
-    
   }
 
   // Alt kategoriler için Sortable
@@ -814,22 +1059,26 @@ const initSortableRecursive = () => {
       animation: 150, // Sürükleme animasyonunun süresi (milisaniye)
       onEnd: async (evt) => {
         // Sıralama bittiğinde çalışacak fonksiyon
-        const itemIDs = Array.from(mainItemList.children).map(item => item.dataset.id);
+        const itemIDs = Array.from(mainItemList.children).map(
+          (item) => item.dataset.id
+        );
         await updateItemOrder(itemIDs, currentSection);
-      }
+      },
     });
   }
 
   // Tüm alt kategori listelerini bul ve Sortable'ı başlat
   const allItemLists = document.querySelectorAll('[id^="itemList-"]');
-  allItemLists.forEach(list => {
-    const categoryName = list.id.replace('itemList-', '');
+  allItemLists.forEach((list) => {
+    const categoryName = list.id.replace("itemList-", "");
     Sortable.create(list, {
       animation: 150,
       onEnd: async (evt) => {
-        const itemIDs = Array.from(list.children).map(item => item.dataset.id);
+        const itemIDs = Array.from(list.children).map(
+          (item) => item.dataset.id
+        );
         await updateItemOrder(itemIDs, categoryName);
-      }
+      },
     });
   });
 };
