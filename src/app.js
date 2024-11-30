@@ -195,7 +195,12 @@ window.showCategoryForm = async function (edit = false) {
     .join("");
 
   formContainer.innerHTML = `
-    <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Kategori</h2>
+  <div class="switch__control">
+    <h1 id="formTitle">Kategori${edit ? "'yi Düzenle" : "Ekle"}</h1>
+    <label class="switch">
+      <input type="checkbox" id="toggleSwitch">
+      <span class="slider"></span>
+    </label></div>
     <input type="text" id="categoryTitle" placeholder="Kategori Başlığı" required>
     <input type="text" id="propertyName" placeholder="Property Name" required>
     <select id="parentCategory">
@@ -215,7 +220,8 @@ window.showCategoryForm = async function (edit = false) {
     <div class="radioGroup">
       <h4>Fiyat Biçimi:</h4>
       <div class="radioButtons" style="display:inline-flex; justify-content:center;">
-        <input type="radio" id="tekil" value="tekil" name="priceFormat">
+        
+      <input type="radio" id="tekil" value="tekil" name="priceFormat">
         <label for="tekil">Tekil</label><br>
         <input type="radio" id="metrekare" value="metrekare" name="priceFormat">
         <label for="metrekare">Metrekare</label><br>
@@ -225,6 +231,8 @@ window.showCategoryForm = async function (edit = false) {
         <label for="artis">Artış</label><br>
         <input type="radio" id="tasDuvar" value="tasDuvar" name="priceFormat">
         <label for="artis">Taş Duvar</label><br>
+        <input type="radio" id="konti" value="konti" name="priceFormat">
+        <label for="konti">Konti</label><br>
       </div>
     </div>
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
@@ -261,6 +269,7 @@ window.editCategory = async function (categoryId) {
     if (docSnap.exists()) {
       const category = docSnap.data();
       await showCategoryForm(true); // Formu düzenleme modunda açın
+      document.getElementById('toggleSwitch').checked = category.accessibility || false; // Mevcut değeri ayarlayın
 
       // Form elemanlarını kategori bilgileriyle doldurun
       document.getElementById("categoryTitle").value = category.title || "";
@@ -285,7 +294,9 @@ window.editCategory = async function (categoryId) {
   }
 };
 
-window.submitCategory = async function () {
+window.submitCategory = async function ()
+ {
+  const isSwitchOn = document.getElementById('toggleSwitch');
   const categoryTitle = document.getElementById("categoryTitle").value;
   const propertyName = document.getElementById("propertyName").value;
   const parentCategory = document.getElementById("parentCategory").value;
@@ -339,6 +350,7 @@ window.submitCategory = async function () {
         priceFormat: priceFormat,
         order: orderValue,
         tags: tags,
+        accessibility:isSwitchOn.checked || false,
       },
       { merge: true }
     );
@@ -586,7 +598,12 @@ window.showForm = async function (edit = false) {
   const formContainer = document.getElementById("formContainer");
 
   formContainer.innerHTML = `
-    <h2 id="formTitle">${edit ? "Düzenle" : "Ekle"} Ürün</h2>
+  <div class="switch__control">
+    <h1 id="formTitle">Ürün ${edit ? "'ü Düzenle" : "Ekle"} </h1>
+    <label class="switch">
+      <input type="checkbox" id="toggleSwitch">
+      <span class="slider"></span>
+    </label></div>
     <input type="text" id="name" placeholder="Ürün Adı" required>
     <input type="number" id="price" required placeholder="Fiyat - cevre">
     <input type="number" id="alanPrice" placeholder="Fiyat - alan">
@@ -687,6 +704,7 @@ window.editItem = async function (itemId) {
       const tagField = document.getElementById("tag");
       const imageFileField = document.getElementById("imageFile");
       const previewContainer = document.getElementById("imagePreviewContainer");
+      const accessibilityField = document.getElementById('toggleSwitch');
       if (
         !nameField ||
         !priceField ||
@@ -697,7 +715,7 @@ window.editItem = async function (itemId) {
         !descField ||
         !tagField ||
         !imageFileField ||
-        !previewContainer
+        !previewContainer 
       ) {
         console.error("Form elementleri bulunamadı!");
         return;
@@ -712,6 +730,7 @@ window.editItem = async function (itemId) {
       heightField.value = item.height || "";
       descField.value = item.description || "";
       tagField.value = item.tag || "";
+      accessibilityField.checked = item.accessibility || false;
 
       // Eğer resim varsa mevcut resim URL'sini tut
       imageFileField.setAttribute("data-existing-url", item.imageUrl || "");
@@ -831,7 +850,8 @@ window.submitItem = async function () {
   const loadingBar = document.querySelector(".loading-bar");
   loadingOverlay.classList.remove("hidden"); // Yükleme çubuğunu göster
   loadingBar.style.width = "0"; // Başlangıçta sıfır genişlikte
-
+  const isSwitchOn = document.getElementById('toggleSwitch').checked;
+  console.log("Toggle Switch Değeri:",isSwitchOn)
   const name = document.getElementById("name").value;
   const price = document.getElementById("price").value;
   const alanPrice = document.getElementById("alanPrice").value;
@@ -972,6 +992,7 @@ Sortable.create(previewContainer, {
         tag,
         images: allImages,
         order: orderValue,
+        accessibility: isSwitchOn,
       },
       { merge: true }
     );
