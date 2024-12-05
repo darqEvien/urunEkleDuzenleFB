@@ -1,166 +1,138 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-  }
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+::-webkit-scrollbar {
+  display: none;
+  visibility: hidden;
+  opacity: 0
+}
 
-  .sidebar {
-    width: 200px;
-    background-color: #2c2c2c;
-    min-height: 100vh;
-    height: auto;
-    padding: 20px;
-    
-  }
-  .stickyMa{
-    position: fixed;
-    background-color: #2c2c2c;
-  }
+.sidebar {
+  width: 200px;
+  background-color: #2c2c2c;
+  min-height: 100vh;
+  height: auto;
+  padding: 20px;
 
-  .sidebar h2 {
-    cursor: pointer;
-    color: #b3b3b3;
-    transition: color 0.3s ease;
-  }
+}
 
-  .sidebar h2:hover {
-    color: #ffffff;
-  }
-   .sidebar-item {
-    display: flex;
-    max-width: 13.5rem;
-  } 
-  .main-content {
-    
-    flex-grow: 1;
-    padding: 20px;
-    background-color: #222222;
-  }
+.stickyMa {
+  position: fixed;
+  background-color: #2c2c2c;
+  height: 100%;
+  overflow-y: auto;
+}
 
-  .section-header {
-    color: #4CAF50;
-    border-bottom: 2px solid #4CAF50;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-  }
+.sidebar h2 {
+  cursor: pointer;
+  color: #b3b3b3;
+  transition: color 0.3s ease;
+}
 
-  .item-box {
-    border: 1px solid #444;
-    padding: 10px;
-    margin-bottom: 10px;
-    background-color: #333333;
-    max-width: 16rem;
-    min-height: 10rem;
-  }
-  .ort{
-    
-    min-height: 200px;
-  }
+.sidebar h2:hover {
+  color: #ffffff;
+}
 
-  .item-box h3 {
-    margin-top: 0;
-    color: #ffffff;
-  }
+.sidebar-item {
+  display: flex;
+  max-width: 13.5rem;
+}
 
-  .add-item-btn {
-    float: right;
-    padding: 10px 20px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
+.main-content {
 
-  .add-item-btn:hover {
-    background-color: #45a049;
-  }
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #222222;
+}
 
-  .form-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    justify-content: center;
-    align-items: center;
-  }
+.section-header {
+  color: #4CAF50;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
 
-  .form-container {
-    background-color: #333333;
-    padding: 20px;
-    border-radius: 5px;
-    color: #e0e0e0;
-  }
+.item-box {
+  border: 1px solid #444;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #333333;
+  max-width: 16rem;
+  min-height: 10rem;
+}
 
-  .form-container input,
-  .form-container select {
-    display: block;
-    margin-bottom: 10px;
-    width: 100%;
-    padding: 5px;
-    background-color: #444444;
-    border: 1px solid #555555;
-    color: #e0e0e0;
-  }
+.ort {
 
-  .form-container button {
-    margin-top: 10px;
-    padding: 5px 10px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
+  min-height: 200px;
+}
 
-  .form-container button:hover {
-    background-color: #45a049;
-  }
+.item-box h3 {
+  margin-top: 0;
+  color: #ffffff;
+}
 
-  .hidden {
-    display: none;
-  }
+.add-item-btn {
+  float: right;
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
 
-  button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 5px;
-    margin: 2px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
+.add-item-btn:hover {
+  background-color: #45a049;
+}
 
-  button:hover {
-    background-color: #215a24;
-  }
-  .item-box {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    display: inline-block;
-    margin: 1rem 3rem;
-    cursor: pointer;
-  }
-  
-  .item-box h3 {
-    margin: 0;
-    font-size: 1.2em;
-  }
-  .item-box:hover  h3, .item-box:hover{
-    background-color: #e0e0e0;
-    transition: background-color 0.3s;
-    color: #333333;
-  }
-  /* Ürün resmi stili */
+
+.hidden {
+  display: none;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 2px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #215a24;
+}
+
+.item-box {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  display: inline-block;
+  margin: 1rem 3rem;
+  cursor: pointer;
+}
+
+.item-box h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+
+.item-box:hover h3,
+.item-box:hover {
+  background-color: #e0e0e0;
+  transition: background-color 0.3s;
+  color: #333333;
+}
+
+/* Ürün resmi stili */
 .product-image {
   width: 100px;
   height: 100px;
@@ -174,6 +146,7 @@ body {
   align-items: center;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
+
 .itemList {
   display: grid;
   align-items: center;
@@ -199,15 +172,14 @@ body {
   height: 150px;
 }
 
-.radioButtons{
-  display: inline-block,;
-}
+
 .sub-category-section {
   margin: 20px 0;
   border-radius: 8px;
 }
 
-.sub-category-section h3, .sub-category-section #addItemBtn {
+.sub-category-section h3,
+.sub-category-section #addItemBtn {
   margin-bottom: 10px;
 }
 
@@ -218,16 +190,19 @@ body {
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: transform 0.3s /* Geçiş efektleri */
+  transition: transform 0.3s
+    /* Geçiş efektleri */
 }
 
 .delete-btn-img:hover {
-  transform: scale(1.2); /* Butonu büyüt */
+  transform: scale(1.2);
+  /* Butonu büyüt */
 }
 
-.image-wrapper:hover{
+.image-wrapper:hover {
   border: white solid 1px;
 }
+
 /* .imagePreviewContainer{
 
   grid-template-columns: repeat(3 ,1fr);
@@ -242,7 +217,8 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Diğer öğelerin üstünde görünmesi için */
+  z-index: 9999;
+  /* Diğer öğelerin üstünde görünmesi için */
 }
 
 .loading-bar {
@@ -251,16 +227,19 @@ body {
   background: #4CAF50;
   transition: width 0.4s ease;
 }
-.hidden{
+
+.hidden {
   display: none;
 }
-.switch__control{
+
+.switch__control {
   display: flex;
-      align-items: center;
-    flex-wrap: wrap;
-    flex-direction: row;
-    justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: space-between;
 }
+
 /* Toggle Switch CSS */
 .switch {
   position: relative;
@@ -299,10 +278,128 @@ body {
   border-radius: 50%;
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: #4CAF50;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(26px);
+}
+
+/* Sekme yapısı için CSS */
+.radio-buttons-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Butonlar arasındaki boşluğu azalt */
+}
+
+.radio-button {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+}
+
+.radio-button__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.radio-button__label {
+  display: inline-flex;
+  /* Flex kullanarak içerikleri ortala */
+  align-items: center;
+  /* Dikey olarak ortala */
+  padding-left: 1.7rem;
+  margin-bottom: 10px;
+  position: relative;
+  font-size: 1rem;
+  /* Yazı boyutunu küçült */
+  color: #fff;
+  /* Yazı rengi beyaz */
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+}
+
+.radio-button__custom {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 16px;
+  /* Yuvarlağın boyutunu küçült */
+  height: 16px;
+  /* Yuvarlağın boyutunu küçült */
+  border-radius: 50%;
+  border: 2px solid #555;
+  /* Varsayılan kenar rengi */
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+}
+
+/* Seçili durum için yeşil rengi ayarlama */
+.radio-button__input:checked+.radio-button__label .radio-button__custom {
+  transform: translateY(-50%) scale(0.9);
+  border: 5px solid #4CAF50;
+  /* Yeşil kenar rengi */
+  color: #4CAF50;
+  /* Yeşil metin rengi */
+}
+
+.radio-button__input:checked+.radio-button__label {
+  color: #4CAF50;
+  /* Yeşil metin rengi */
+}
+
+/* Hover durumu için yeşil rengi ayarlama */
+.radio-button__label:hover .radio-button__custom {
+  transform: translateY(-50%) scale(1.2);
+  border-color: #4CAF50;
+  /* Yeşil kenar rengi */
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+  /* Yeşil gölge */
+}
+.form-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+}
+
+.form-container {
+  background-color: #333333;
+  padding: 20px;
+  border-radius: 5px;
+  color: #e0e0e0;
+}
+
+.form-container input,
+.form-container select {
+  display: block;
+  margin-bottom: 10px;
+  width: 100%;
+  padding: 5px;
+  background-color: #444444;
+  border: 1px solid #555555;
+  color: #e0e0e0;
+}
+
+.form-container button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.form-container button:hover {
+  background-color: #45a049;
 }

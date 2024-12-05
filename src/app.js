@@ -115,6 +115,7 @@ window.editSubCategoryItem = async function (itemId, subCategoryName) {
       await showForm(true);
 
       // Form elemanlarını doldur
+      document.getElementById('toggleSwitch').checked = item.accessibility || false;
       document.getElementById("name").value = item.name || "";
       document.getElementById("price").value = item.price || "";
       document.getElementById("size").value = item.size || "";
@@ -211,30 +212,78 @@ window.showCategoryForm = async function (edit = false) {
       <h4>Seçim Tipi:</h4>
       <div class="radioButtons" style="display:inline-flex; justify-content:center;">
         <input type="radio" id="singleSelect" value="singleSelect" name="select">
-        <label for="singleSelect">Tekli Seçim</label><br>
+        <label class="radio-button" for="singleSelect">Tekli Seçim</label><br>
         <input type="radio" id="multiSelect" value="multiSelect" name="select">
-        <label for="multiSelect">Çoklu Seçim</label><br>
+        <label class="radio-button" for="multiSelect">Çoklu Seçim</label><br>
       </div>
     </div>
 
-    <div class="radioGroup">
-      <h4>Fiyat Biçimi:</h4>
-      <div class="radioButtons" style="display:inline-flex; justify-content:center;">
-        
-      <input type="radio" id="tekil" value="tekil" name="priceFormat">
-        <label for="tekil">Tekil</label><br>
-        <input type="radio" id="metrekare" value="metrekare" name="priceFormat">
-        <label for="metrekare">Metrekare</label><br>
-        <input type="radio" id="cevre" value="cevre" name="priceFormat">
-        <label for="cevre">Çevre</label><br>
-        <input type="radio" id="artis" value="artis" name="priceFormat">
-        <label for="artis">Artış</label><br>
-        <input type="radio" id="tasDuvar" value="tasDuvar" name="priceFormat">
-        <label for="artis">Taş Duvar</label><br>
-        <input type="radio" id="konti" value="konti" name="priceFormat">
-        <label for="konti">Konti</label><br>
-      </div>
+<div class="radioGroup">
+  <h4>Fiyat Biçimi:</h4>
+  <div class="radio-buttons-container" style="display: inline-flex; justify-content: center;">
+    <div class="radio-button">
+      <input type="radio" id="tekil" value="tekil" name="priceFormat" class="radio-button__input" checked />
+      <label class="radio-button__label" for="tekil">
+        <span class="radio-button__custom"></span>
+        Tekil
+      </label>
     </div>
+
+    <div class="radio-button">
+      <input type="radio" id="metrekare" value="metrekare" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="metrekare">
+        <span class="radio-button__custom"></span>
+        Metrekare
+      </label>
+    </div>
+
+    <div class="radio-button">
+      <input type="radio" id="cevre" value="cevre" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="cevre">
+        <span class="radio-button__custom"></span>
+        Çevre
+      </label>
+    </div>
+
+    <div class="radio-button">
+      <input type="radio" id="artis" value="artis" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="artis">
+        <span class="radio-button__custom"></span>
+        Artış
+      </label>
+    </div>
+
+    <div class="radio-button">
+      <input type="radio" id="tasDuvar" value="tasDuvar" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="tasDuvar">
+        <span class="radio-button__custom"></span>
+        Taş Duvar
+      </label>
+    </div>
+
+    <div class="radio-button">
+      <input type="radio" id="konti" value="konti" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="konti">
+        <span class="radio-button__custom"></span>
+        Konti
+      </label>
+    </div>
+    <div class="radio-button">
+      <input type="radio" id="veranda" value="veranda" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="veranda">
+        <span class="radio-button__custom"></span>
+        Veranda
+      </label>
+    </div>
+    <div class="radio-button">
+      <input type="radio" id="onYuzey" value="onYuzey" name="priceFormat" class="radio-button__input" />
+      <label class="radio-button__label" for="onYuzey">
+        <span class="radio-button__custom"></span>
+        Ön Yüzey
+      </label>
+    </div>
+  </div>
+</div>
     <input type="text" id="categoryTags" placeholder="Etiketleri virgül ile ayırınız">
     <br >
     <div style="display:flex; justify-content:center;">
@@ -599,7 +648,7 @@ window.showForm = async function (edit = false) {
 
   formContainer.innerHTML = `
   <div class="switch__control">
-    <h1 id="formTitle">Ürün ${edit ? "'ü Düzenle" : "Ekle"} </h1>
+    <h1 id="formTitle">Ürün${edit ? "'ü Düzenle" : " Ekle"} </h1>
     <label class="switch">
       <input type="checkbox" id="toggleSwitch">
       <span class="slider"></span>
@@ -837,7 +886,9 @@ window.updateID = async function () {
   try {
     const collectionRef = collection(db, "categories");
     const querySnapshot = await getDocs(collectionRef);
-    return `category-${querySnapshot.size + 1}`; // Yeni ID formatı
+    const timestamp = Date.now();
+
+    return `category-${querySnapshot.size + 1}-${timestamp}`; // Yeni ID formatı
   } catch (error) {
     console.error("Error fetching items for ID update:", error);
     return null; // Hata durumunda null döndür
